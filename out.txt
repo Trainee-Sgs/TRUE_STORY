@@ -1,0 +1,47 @@
+Analyzing true_story...                                         
+
+   info - Unnecessary use of 'toList' in a spread - lib\screens\For_You\upload_story_screen.dart:137:22 - unnecessary_to_list_in_spreads
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\Menuscreens\app_drawer.dart:202:44 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\screens\Menuscreens\app_drawer.dart:212:33 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\screens\Menuscreens\app_drawer.dart:212:37 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\Menuscreens\app_drawer.dart:247:34 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\Menuscreens\feedback_screen.dart:60:34 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\Menuscreens\feedback_screen.dart:73:37 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\Menuscreens\feedback_screen.dart:237:52 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\screens\Menuscreens\history_screen.dart:86:33 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\screens\Menuscreens\history_screen.dart:86:37 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\Menuscreens\notification_screen.dart:160:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\Menuscreens\notification_screen.dart:300:36 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\Menuscreens\privacy_screen.dart:50:38 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\Menuscreens\terms_screen.dart:50:38 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\screens\homescreen\home_screen.dart:253:39 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\screens\homescreen\home_screen.dart:253:43 - unnecessary_underscores
+   info - Unnecessary instance of 'Container' - lib\screens\homescreen\home_screen.dart:253:51 - avoid_unnecessary_containers
+   info - Unnecessary use of multiple underscores - lib\screens\homescreen\home_screen.dart:481:39 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\screens\homescreen\home_screen.dart:481:43 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\screens\homescreen\home_screen.dart:635:39 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\screens\homescreen\home_screen.dart:635:43 - unnecessary_underscores
+warning - The declaration '_buildBannerAction' isn't referenced - lib\screens\homescreen\home_screen.dart:739:10 - unused_element
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\homescreen\popular_view.dart:103:37 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\screens\homescreen\popular_view.dart:123:43 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\screens\homescreen\popular_view.dart:123:47 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\homescreen\recommend_view.dart:103:37 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\screens\homescreen\recommend_view.dart:123:43 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\screens\homescreen\recommend_view.dart:123:47 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\setting\like_screen.dart:129:45 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\setting\premium_access_screen.dart:49:43 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\setting\premium_access_screen.dart:152:52 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\setting\premium_access_screen.dart:152:84 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\setting\premium_access_screen.dart:297:39 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\setting\premium_access_screen.dart:428:52 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\setting\premium_screen.dart:76:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\setting\premium_screen.dart:144:47 - deprecated_member_use
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\screens\setting\settings_screen.dart:354:13 - deprecated_member_use
+   info - 'Share' is deprecated and shouldn't be used. Use SharePlus instead - lib\utils\share_helper.dart:6:11 - deprecated_member_use
+   info - 'share' is deprecated and shouldn't be used. Use SharePlus.instance.share() instead - lib\utils\share_helper.dart:6:17 - deprecated_member_use
+   info - 'Share' is deprecated and shouldn't be used. Use SharePlus instead - lib\utils\share_helper.dart:11:11 - deprecated_member_use
+   info - 'share' is deprecated and shouldn't be used. Use SharePlus.instance.share() instead - lib\utils\share_helper.dart:11:17 - deprecated_member_use
+   info - Unnecessary use of 'toList' in a spread - lib\widgets\comment_bottom_sheet.dart:258:108 - unnecessary_to_list_in_spreads
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\widgets\custom_bottom_nav.dart:63:47 - deprecated_member_use
+
+43 issues found. (ran in 5.0s)

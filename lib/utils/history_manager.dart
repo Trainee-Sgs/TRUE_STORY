@@ -17,12 +17,24 @@ class HistoryManager extends ChangeNotifier {
     final String? historyJson = _prefs?.getString('story_history');
     if (historyJson != null) {
       _historyItems = List<Map<String, dynamic>>.from(json.decode(historyJson));
+      
+      // Clean up any 'Unknown' or invalid stories from history
+      _historyItems.removeWhere((item) {
+        final title = (item['title'] ?? item['story_title'] ?? '').toString().toUpperCase();
+        return title.isEmpty || title.contains('UNKNOWN');
+      });
+      _saveToPrefs();
     }
   }
 
   Future<void> addToHistory(Map<String, dynamic> storyData) async {
+    final title = (storyData['title'] ?? storyData['story_title'] ?? '').toString().toUpperCase();
+    if (title.isEmpty || title.contains('UNKNOWN')) return; // Do not add invalid stories to history
+
     // Check if story is already in history, if so remove it to push to front
-    _historyItems.removeWhere((item) => item['title'] == storyData['title']);
+    _historyItems.removeWhere((item) => 
+      (item['title'] ?? item['story_title']) == (storyData['title'] ?? storyData['story_title'])
+    );
     
     // Add to front of list
     _historyItems.insert(0, {

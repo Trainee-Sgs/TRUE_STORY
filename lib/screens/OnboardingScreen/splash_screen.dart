@@ -22,7 +22,7 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _fetchDeviceInfoAndLocation() async {
-    String deviceId = 'unknown';
+    String deviceId = '';
     try {
       final DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
       if (Platform.isAndroid) {
@@ -30,9 +30,12 @@ class _SplashScreenState extends State<SplashScreen> {
         deviceId = androidInfo.id;
       } else if (Platform.isIOS) {
         final iosInfo = await deviceInfo.iosInfo;
-        deviceId = iosInfo.identifierForVendor ?? 'unknown';
+        deviceId = iosInfo.identifierForVendor ?? '';
       }
     } catch (_) {}
+
+    double latitude = 0.0;
+    double longitude = 0.0;
 
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
@@ -77,13 +80,17 @@ class _SplashScreenState extends State<SplashScreen> {
         Position position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high,
         );
-        await SessionManager.saveDeviceInfo(
-          deviceId: deviceId,
-          lt: position.latitude,
-          ln: position.longitude,
-        );
+        latitude = position.latitude;
+        longitude = position.longitude;
       } catch (_) {}
     }
+
+    // Always save device info so SharedPreferences is never empty!
+    await SessionManager.saveDeviceInfo(
+      deviceId: deviceId,
+      lt: latitude,
+      ln: longitude,
+    );
   }
 
   @override
@@ -160,12 +167,60 @@ class _SplashScreenState extends State<SplashScreen> {
                 width: double.infinity,
                 height: buttonHeight,
                 child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const LoginScreen(),
-                      ),
-                    );
+                  onPressed: () async {
+                    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+                    if (!serviceEnabled) {
+                      if (context.mounted) {
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (context) => AlertDialog(
+                            title: Text('Location Required', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+                            content: Text('Please enable location services in your device settings to proceed.', style: GoogleFonts.poppins()),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey)),
+                              ),
+                              ElevatedButton(
+                                onPressed: () async {
+                                  Navigator.pop(context);
+                                  await Geolocator.openLocationSettings();
+                                },
+                                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7C348D)),
+                                child: Text('Open Settings', style: GoogleFonts.poppins(color: Colors.white)),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                      return;
+                    }
+
+                    LocationPermission permission = await Geolocator.checkPermission();
+                    if (permission == LocationPermission.denied) {
+                      permission = await Geolocator.requestPermission();
+                    }
+                    
+                    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Location permissions are required to proceed.'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                      return;
+                    }
+
+                    if (context.mounted) {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const LoginScreen(),
+                        ),
+                      );
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF7C348D),

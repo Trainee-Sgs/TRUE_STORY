@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'screens/OnboardingScreen/logo.dart';
 import 'utils/guest_manager.dart';
@@ -33,10 +34,10 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         textTheme: GoogleFonts.poppinsTextTheme(),
         primarySwatch: Colors.deepPurple,
-        pageTransitionsTheme: const PageTransitionsTheme(
+        pageTransitionsTheme: PageTransitionsTheme(
           builders: {
-            TargetPlatform.android: CupertinoPageTransitionsBuilder(),
-            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.android: const CupertinoPageTransitionsBuilder(),
+            TargetPlatform.iOS: const CupertinoPageTransitionsBuilder(),
           },
         ),
       ),

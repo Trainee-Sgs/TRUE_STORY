@@ -8,8 +8,11 @@ import '../Category/category_screen.dart';
 import '../For_You/for_you_screen.dart';
 import '../OnboardingScreen/login_screen.dart';
 import '../../utils/share_helper.dart';
-
 import '../../widgets/language_dialog.dart';
+import '../../Provider/profile_provider.dart';
+import '../../shared_preference.dart';
+
+import '../For_You/edit_profile_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -21,6 +24,28 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _isDarkMode = false;
   bool _isNotificationEnabled = true;
+
+  final ProfileProvider _profileProvider = ProfileProvider();
+  String _sessionName = 'User';
+  String _sessionPhone = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSessionData();
+    _profileProvider.fetchProfile();
+  }
+
+  Future<void> _loadSessionData() async {
+    final session = await SessionManager.getAll();
+    if (mounted) {
+      setState(() {
+        _sessionName = session['user_name']?.toString() ?? 'User';
+        if (_sessionName.isEmpty) _sessionName = 'User';
+        _sessionPhone = session['uid']?.toString() ?? '';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,59 +95,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16 * scale),
-                  child: Row(
-                    children: [
-                      // Profile Image
-                      Container(
-                        width: 70 * scale,
-                        height: 70 * scale,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                          image: const DecorationImage(
-                            image: NetworkImage('https://i.pravatar.cc/150?u=sowmiya'),
-                            fit: BoxFit.cover,
+                  child: ListenableBuilder(
+                    listenable: _profileProvider,
+                    builder: (context, child) {
+                      final profile = _profileProvider.profileData;
+                      
+                      final String imageUrl = profile?['profile_image']?.toString() ?? '';
+                      String name = profile?['author_name']?.toString() ?? profile?['name']?.toString() ?? profile?['username']?.toString() ?? _sessionName;
+                      // Removed the fallback to 'User' so it stays empty if the API returns an empty string.
+                      final String mobileNumber = profile?['mobile_number']?.toString() ?? _sessionPhone;
+
+                      return Row(
+                        children: [
+                          SizedBox(width: 20 * scale),
+                          // User Info
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  name,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16 * scale,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                if (mobileNumber.isNotEmpty)
+                                  Text(
+                                    mobileNumber,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 13 * scale,
+                                      color: Colors.white.withValues(alpha: 0.9),
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ),
-                      SizedBox(width: 15 * scale),
-                      // User Info
-                      Expanded(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Sowmiya',
-                              style: GoogleFonts.poppins(
-                                fontSize: 16 * scale,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
+                          // Edit Icon
+                          IconButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const EditProfileScreen()),
+                              ).then((_) {
+                                // Refresh profile data when returning
+                                _profileProvider.fetchProfile();
+                              });
+                            },
+                            icon: Icon(
+                              Icons.edit,
+                              color: Colors.white,
+                              size: 24 * scale,
                             ),
-                            Text(
-                              '9488566544',
-                              style: GoogleFonts.poppins(
-                                fontSize: 13 * scale,
-                                color: Colors.white.withValues(alpha: 0.9),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Edit Icon
-                      // Align(
-                      //   alignment: Alignment.topRight,
-                      //   child: Padding(
-                      //     padding: EdgeInsets.only(top: 15 * scale),
-                      //     child: Icon(
-                      //       Icons.edit_outlined,
-                      //       color: Colors.white,
-                      //       size: 20 * scale,
-                      //     ),
-                      //   ),
-                      // ),
-                    ],
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ),
               ),
@@ -300,14 +330,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LoginScreen(),
-                          ),
-                          (route) => false,
-                        );
+                      onPressed: () async {
+                        await SessionManager.logout();
+                        if (context.mounted) {
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const LoginScreen(),
+                            ),
+                            (route) => false,
+                          );
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFE52D27),

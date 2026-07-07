@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'dart:convert';
+import '../../shared_preference.dart';
+import '../../Provider/signup_provider.dart';
 import 'otp_bottom_sheet.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -14,6 +17,81 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _mobileNumberController = TextEditingController();
   bool _isButtonEnabled = false;
+  final SignUpProvider _signUpProvider = SignUpProvider();
+
+  Future<void> _performSignUp() async {
+    final success = await _signUpProvider.performSignUp(
+      name: _nameController.text,
+      email: _emailController.text,
+      mobileNumber: _mobileNumberController.text,
+    );
+
+    if (mounted) {
+      if (success) {
+        _showSuccessDialog();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_signUpProvider.errorMessage ?? 'Signup failed')),
+        );
+      }
+    }
+  }
+
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.check_circle, color: Colors.green, size: 64),
+                const SizedBox(height: 16),
+                Text(
+                  'Registered Successfully!',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 45,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context); // close dialog
+                      Navigator.pop(context); // go back to login screen
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF7C348D),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      'Go to Login',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   void initState() {
@@ -54,7 +132,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => OTPBottomSheet(maskedPhone: maskedPhone, phone: phone),
+      builder: (context) => OTPBottomSheet(
+        maskedPhone: maskedPhone, 
+        phone: phone,
+        authorName: _nameController.text,
+      ),
     );
   }
 
@@ -76,7 +158,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
    // final double labelFontSize = 13 * scale;
    // final double inputFontSize = 13 * scale;
     final double buttonHeight = 46 * scale;
-    final double socialIconSize = 48 * scale;
     final double captionFontSize = 10 * scale;
 
     return Scaffold(
@@ -146,78 +227,45 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 SizedBox(height: 16 * scale),
 
                 // Sign Up Button
-                SizedBox(
-                  width: double.infinity,
-                  height: buttonHeight,
-                  child: ElevatedButton(
-                    onPressed: _isButtonEnabled ? _showOTPBottomSheet : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _isButtonEnabled ? primaryPurple : const Color(0xFFE1B6FE),
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: const Color(0xFFE1B6FE),
-                      disabledForegroundColor: Colors.white.withAlpha(180),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                ListenableBuilder(
+                  listenable: _signUpProvider,
+                  builder: (context, child) {
+                    return SizedBox(
+                      width: double.infinity,
+                      height: buttonHeight,
+                      child: ElevatedButton(
+                        onPressed: _isButtonEnabled && !_signUpProvider.isLoading ? _performSignUp : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _isButtonEnabled ? primaryPurple : const Color(0xFFE1B6FE),
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: const Color(0xFFE1B6FE),
+                          disabledForegroundColor: Colors.white.withAlpha(180),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: _signUpProvider.isLoading 
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                              )
+                            : Text(
+                                'Sign Up',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 18 * scale,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                       ),
-                      elevation: 0,
-                    ),
-                    child: Text(
-                      'Sign Up',
-                      style: GoogleFonts.poppins(
-                        fontSize: 18 * scale,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
 
                 SizedBox(height: 12 * scale),
 
-                // Divider
-                Row(
-                  children: [
-                    const Expanded(child: Divider()),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Text(
-                        'or',
-                        style: GoogleFonts.poppins(
-                          color: Colors.grey,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ),
-                    const Expanded(child: Divider()),
-                  ],
-                ),
-                SizedBox(height: 6 * scale),
-                Text(
-                  'continue with',
-                  style: GoogleFonts.poppins(
-                    color: Colors.grey,
-                    fontSize: 13 * scale,
-                  ),
-                ),
-                SizedBox(height: 10 * scale),
 
-                // Social Login
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _SocialBtn(
-                      assetPath: 'assets/images/apple_logo.png',
-                      onTap: () {},
-                      size: socialIconSize,
-                    ),
-                    SizedBox(width: 20 * scale),
-                    _SocialBtn(
-                      assetPath: 'assets/images/google_logo.png',
-                      onTap: () {},
-                      size: socialIconSize,
-                    ),
-                  ],
-                ),
-                SizedBox(height: 6 * scale),
                 // Back to Login
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
@@ -312,38 +360,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _SocialBtn extends StatelessWidget {
-  final String assetPath;
-  final VoidCallback onTap;
-  final double size;
-
-  const _SocialBtn({
-    required this.assetPath,
-    required this.onTap,
-    required this.size,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(size),
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.grey.shade300),
-        ),
-        child: Padding(
-          padding: EdgeInsets.all(size * 0.25),
-          child: Image.asset(assetPath, fit: BoxFit.contain),
-        ),
-      ),
     );
   }
 }

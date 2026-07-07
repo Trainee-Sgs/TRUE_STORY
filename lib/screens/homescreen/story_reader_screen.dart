@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_pdfview/flutter_pdfview.dart';
 import '../../utils/pagination_helper.dart';
 import '../../utils/save_manager.dart';
 import '../../utils/share_helper.dart';
@@ -26,10 +25,6 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
   int _currentChapterIndex = 0;
   List<Map<String, dynamic>> _storyChapters = [];
 
-  // PDF Viewer state
-  int _pdfPages = 0;
-  int _currentPdfPage = 0;
-  bool _isPdfReady = false;
   int _selectedFeedback = -1; // -1: None, 0: Sad, 1: Happy, 2: Love
   bool _feedbackSubmitted = false;
   late final String _storyId;
@@ -80,11 +75,15 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
       }
     } else {
       // Fallback for overview or other content strings
-      final String fullText = widget.storyData['fullText'] ?? 
+      String fullText = widget.storyData['fullText'] ?? 
                              widget.storyData['content'] ??
                              widget.storyData['overview'] ??
                              widget.storyData['description'] ?? 
-                             "No content available.";
+                             widget.storyData['story_description'] ??
+                             "";
+      if (fullText.trim().isEmpty) {
+        fullText = "No story content available.";
+      }
       final pagedTexts = PaginationHelper.paginateText(
         text: fullText,
         fontSize: _fontSize,
@@ -129,9 +128,6 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
     final double w = MediaQuery.of(context).size.width;
     final double h = MediaQuery.of(context).size.height;
     final double scale = (w / 360).clamp(0.8, 1.4);
-    final String? pdfPath = widget.storyData['pdfPath'];
-
-    if (pdfPath != null) return _buildPdfReader(pdfPath, scale);
 
     if (!_isPaginated) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _calculatePages(w, h - 80));
@@ -206,17 +202,17 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
     final category = widget.storyData['category'] ?? 'TRUE STORY';
     final title = widget.storyData['title'] ?? '';
     final author = widget.storyData['author'] ?? 'Anonymous';
-    final String image = widget.storyData['image'] ?? 'assets/images/ratan_tata.png';
+    final String image = widget.storyData['image']?.toString().trim() ?? widget.storyData['header_image']?.toString().trim() ?? 'assets/images/ratan_tata.png';
     final bool isLocalFile = widget.storyData['isLocalFile'] ?? false;
     final themeColor = _getCategoryThemeColor(category);
 
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: themeColor.withOpacity(0.3),
+        color: themeColor.withValues(alpha: 0.3),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -231,7 +227,7 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
               Container(
                 height: 220 * scale,
                 width: double.infinity,
-                color: themeColor.withOpacity(0.1),
+                color: themeColor.withValues(alpha: 0.1),
               ),
               
               // Image on the right - "right fulla cover"
@@ -248,22 +244,33 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
                       offset: Offset(50 * (1 - value), 0),
                       child: Opacity(
                         opacity: 0.9 * value,
-                        child: Container(
+                        child: SizedBox(
                           width: 260 * scale,
                           child: Stack(
                             children: [
                               isLocalFile 
-                                ? Image.file(File(image), fit: BoxFit.cover, height: double.infinity, width: double.infinity)
-                                : Image.asset(image, fit: BoxFit.cover, height: double.infinity, width: double.infinity),
+                                ? Image.file(
+                                    File(image), fit: BoxFit.cover, height: double.infinity, width: double.infinity,
+                                    errorBuilder: (_, _, _) => Container(color: Colors.grey[200]),
+                                  )
+                                : image.startsWith('http') || image.startsWith('https')
+                                    ? Image.network(
+                                        image, fit: BoxFit.cover, height: double.infinity, width: double.infinity,
+                                        errorBuilder: (_, _, _) => Container(color: Colors.grey[200]),
+                                      )
+                                    : Image.asset(
+                                        image, fit: BoxFit.cover, height: double.infinity, width: double.infinity,
+                                        errorBuilder: (_, _, _) => Container(color: Colors.grey[200]),
+                                      ),
                               // Gradient to blend the image into the theme color
                               Container(
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
                                     colors: [
-                                      themeColor.withOpacity(0.0),
-                                      themeColor.withOpacity(0.0),
-                                      themeColor.withOpacity(0.0),
-                                      themeColor.withOpacity(1.0),
+                                      themeColor.withValues(alpha: 0.0),
+                                      themeColor.withValues(alpha: 0.0),
+                                      themeColor.withValues(alpha: 0.0),
+                                      themeColor.withValues(alpha: 1.0),
                                     ],
                                     begin: Alignment.centerLeft,
                                     end: Alignment.centerRight,
@@ -274,8 +281,8 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
                                     colors: [
-                                      themeColor.withOpacity(1.0),
-                                      themeColor.withOpacity(0.0),
+                                      themeColor.withValues(alpha: 1.0),
+                                      themeColor.withValues(alpha: 0.0),
                                     ],
                                     begin: Alignment.centerLeft,
                                     end: Alignment.centerRight,
@@ -301,7 +308,7 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 0.8),
                         borderRadius: BorderRadius.circular(4),
                         border: Border.all(color: themeColor, width: 1),
                       ),
@@ -324,7 +331,7 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
                         color: _getTextColor(),
                         shadows: [
                           Shadow(
-                            color: Colors.white.withOpacity(0.8),
+                            color: Colors.white.withValues(alpha: 0.8),
                             offset: const Offset(1, 1),
                             blurRadius: 2,
                           ),
@@ -345,7 +352,7 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
                           style: GoogleFonts.poppins(
                             fontSize: 12 * scale,
                             fontWeight: FontWeight.w500,
-                            color: _getTextColor().withOpacity(0.7),
+                            color: _getTextColor().withValues(alpha: 0.7),
                           ),
                         ),
                       ],
@@ -375,8 +382,8 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              themeColor.withOpacity(0.9),
-              themeColor.withOpacity(0.0),
+              themeColor.withValues(alpha: 0.9),
+              themeColor.withValues(alpha: 0.0),
             ],
           ),
         ),
@@ -505,7 +512,7 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 10),
               decoration: BoxDecoration(
                 color: _selectedFeedback == -1 
-                    ? Colors.grey.withOpacity(0.3) // Disabled color
+                    ? Colors.grey.withValues(alpha: 0.3) // Disabled color
                     : const Color(0xFF7C348D),     // Enabled color (consistent with theme)
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -531,7 +538,7 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFE1BEE7).withOpacity(0.5) : Colors.transparent,
+          color: isSelected ? const Color(0xFFE1BEE7).withValues(alpha: 0.5) : Colors.transparent,
           shape: BoxShape.circle,
         ),
         child: Icon(
@@ -600,34 +607,6 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
     );
   }
 
-  Widget _buildPdfReader(String path, double scale) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          PDFView(
-            filePath: path, 
-            swipeHorizontal: true,
-            onRender: (pages) => setState(() { _pdfPages = pages ?? 0; _isPdfReady = true; }),
-            onPageChanged: (page, total) => setState(() => _currentPdfPage = page ?? 0),
-          ),
-          if (!_isPdfReady) const Center(child: CircularProgressIndicator()),
-          
-          // Use the same overlay for consistency
-          _buildReaderOverlay(scale),
-
-          Positioned(
-            bottom: 20 * scale, 
-            right: 20 * scale,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(15)),
-              child: Text('${_currentPdfPage + 1} / $_pdfPages', style: const TextStyle(color: Colors.white, fontSize: 12)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _ReaderPage {

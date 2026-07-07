@@ -71,7 +71,7 @@ class RecommendViewScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(12 * scale),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -85,16 +85,32 @@ class RecommendViewScreen extends StatelessWidget {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.vertical(top: Radius.circular(12 * scale)),
-                    child: Image.asset(
-                      story['image'],
-                      width: double.infinity,
-                      height: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        color: Colors.grey[200],
-                        child: const Icon(Icons.image_not_supported, color: Colors.grey),
-                      ),
-                    ),
+                    child: (story['image'] == null || story['image'].isEmpty)
+                        ? Container(
+                            color: Colors.grey[200],
+                            child: const Icon(Icons.image_not_supported, color: Colors.grey),
+                          )
+                        : story['image'].startsWith('http')
+                            ? Image.network(
+                                story['image'],
+                                width: double.infinity,
+                                height: double.infinity,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, _, _) => Container(
+                                  color: Colors.grey[200],
+                                  child: const Icon(Icons.image_not_supported, color: Colors.grey),
+                                ),
+                              )
+                            : Image.asset(
+                                story['image'],
+                                width: double.infinity,
+                                height: double.infinity,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, _, _) => Container(
+                                  color: Colors.grey[200],
+                                  child: const Icon(Icons.image_not_supported, color: Colors.grey),
+                                ),
+                              ),
                   ),
                   Positioned(
                     top: 8 * scale,

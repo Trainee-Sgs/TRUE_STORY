@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:true_story/utils/post_manager.dart';
+import 'package:true_story/utils/date_util.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:true_story/screens/setting/settings_screen.dart';
@@ -18,6 +19,7 @@ import '../../widgets/custom_bottom_nav.dart';
 import '../../widgets/language_dialog.dart';
 import '../../widgets/story_options_sheet.dart';
 import '../../utils/history_manager.dart';
+import '../../Provider/full_story_approval_provider.dart';
 
 
 class HomeScreen extends StatefulWidget {
@@ -31,6 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   final PageController _bannerController = PageController();
   Timer? _bannerTimer;
+  final FullStoryApprovalProvider _fullStoryApprovalProvider = FullStoryApprovalProvider();
 
   // ── Banner slides ──────────────────────────────────────────────
   final List<_BannerSlide> _banners = const [
@@ -49,6 +52,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _fullStoryApprovalProvider.fetchApprovedStories();
     _startBannerTimer();
   }
 
@@ -94,12 +98,21 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildPopularList(scale),
 
             // ── Recently Watched ─────────────────────────────────
-            _buildSectionHeader('Recently Watched', scale, showViewAll: false),
+            _buildSectionHeader('Recently Watched', scale, showViewAll: true),
             ListenableBuilder(
               listenable: HistoryManager(),
               builder: (context, _) {
-                final history = HistoryManager().historyItems;
-                if (history.isEmpty) {
+                final history = HistoryManager().historyItems.where((story) {
+                  if (!story.containsKey('status')) return true;
+                  final status = story['status']?.toString().toLowerCase() ?? '';
+                  return status == 'approved' || status == '1';
+                }).toList();
+                final validHistory = history.where((h) {
+                  final t = (h['title'] ?? h['story_title'] ?? '').toString();
+                  return t.isNotEmpty && !t.toUpperCase().contains('UNKNOWN');
+                }).toList();
+                
+                if (validHistory.isEmpty) {
                   return Padding(
                     padding: const EdgeInsets.all(20),
                     child: Center(
@@ -110,14 +123,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   );
                 }
-                
-                final List<_ContentCard> historyCards = history.take(10).map((h) => _ContentCard(
-                      image: h['image'] ?? 'assets/images/bannar01.png',
-                      title: h['title'] ?? 'Unknown Story',
-                      subtitle: h['overview'] ?? h['description'] ?? '',
+
+                final List<_ContentCard> historyCards = validHistory.take(10).map((h) => _ContentCard(
+                      image: h['image'] ?? h['header_image'] ?? 'assets/images/bannar01.png',
+                      title: h['title'] ?? h['story_title'] ?? 'Unknown Story',
+                      subtitle: h['overview'] ?? h['story_description'] ?? h['description'] ?? '',
                       views: h['views']?.toString() ?? '0',
-                      time: 'Recent',
-                      overview: h['overview'] ?? '',
+                      time: DateUtil.getTimeAgo(h['timestamp']?.toString() ?? h['created_at']?.toString() ?? h['date']?.toString()),
+                      overview: h['overview'] ?? h['story_description'] ?? '',
                       fullData: h,
                     )).toList();
                     
@@ -129,32 +142,80 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
 
             // ── Latest Upload ────────────────────────────────────
-            _buildSectionHeader('Latest Upload', scale, showViewAll: false),
-            ValueListenableBuilder<List<Map<String, dynamic>>>(
-              valueListenable: PostManager().uploadedPosts,
-              builder: (context, uploadedPosts, _) {
-                final List<_ContentCard> latestCards = [
-                  // Real uploads at the front
-                  ...uploadedPosts.reversed.take(10).map((p) => _ContentCard(
-                        image: p['image'],
-                        title: p['title'],
-                        subtitle: p['description'] ?? '',
-                        views: p['views']?.toString() ?? '0',
-                        time: 'Just now',
-                        overview: p['fullText'] ?? p['description'] ?? 'No content.',
-                        fullData: p,
-                      )),
-                  // A few curated defaults if not many uploads
-                  if (uploadedPosts.length < 2)
-                    _ContentCard(
-                      image: 'assets/images/bannar02.png',
-                      title: 'Elon Musk: A Bold Innovator and Risk-Taker',
-                      subtitle: 'Elon Musk revolutionized electric vehicles and space exploration.',
-                      views: '2M',
-                      time: '1 Year ago',
-                      overview: 'Elon Reeve Musk (born June 28, 1971) is a businessman and investor. He is the founder, chairman, CEO, and chief technology officer of SpaceX.',
+            _buildSectionHeader('Latest Upload', scale, showViewAll: true),
+            ListenableBuilder(
+              listenable: _fullStoryApprovalProvider,
+              builder: (context, _) {
+                if (_fullStoryApprovalProvider.isLoading) {
+                  return Padding(
+                    padding: EdgeInsets.all(40 * scale),
+                    child: const Center(child: CircularProgressIndicator(color: Color(0xFF7C348D))),
+                  );
+                }
+
+                final approvedStories = _fullStoryApprovalProvider.approvedStories.where((story) {
+                  final status = story['status']?.toString().toLowerCase() ?? '';
+                  if (status != 'approved' && status != '1') return false;
+
+                  final String dateStr = story['published_at']?.toString() ?? story['created_at']?.toString() ?? '';
+                  if (dateStr.isNotEmpty) {
+                    try {
+                      final DateTime publishedDate = DateTime.parse(dateStr);
+                      final Duration difference = DateTime.now().difference(publishedDate);
+                      if (difference.inDays > 3) {
+                        return false;
+                      }
+                    } catch (e) {
+                      return false;
+                    }
+                  } else {
+                    return false;
+                  }
+
+                  return true;
+                }).toList();
+
+                approvedStories.sort((a, b) {
+                  final String dateStrA = a['published_at']?.toString() ?? a['created_at']?.toString() ?? '';
+                  final String dateStrB = b['published_at']?.toString() ?? b['created_at']?.toString() ?? '';
+                  DateTime dateA = DateTime.fromMillisecondsSinceEpoch(0);
+                  DateTime dateB = DateTime.fromMillisecondsSinceEpoch(0);
+                  try {
+                    if (dateStrA.isNotEmpty) dateA = DateTime.parse(dateStrA);
+                  } catch (_) {}
+                  try {
+                    if (dateStrB.isNotEmpty) dateB = DateTime.parse(dateStrB);
+                  } catch (_) {}
+                  return dateB.compareTo(dateA);
+                });
+                if (approvedStories.isEmpty) {
+                  return Padding(
+                    padding: EdgeInsets.all(20 * scale),
+                    child: Center(
+                      child: Text(
+                        'No latest uploads.',
+                        style: GoogleFonts.poppins(color: Colors.grey, fontSize: 13 * scale),
+                      ),
                     ),
-                ];
+                  );
+                }
+
+                final List<_ContentCard> latestCards = approvedStories.take(10).map((p) {
+                  String imageUrl = p['header_image']?.toString() ?? '';
+                  if (imageUrl.isEmpty) {
+                    imageUrl = 'assets/images/bannar01.png'; // fallback image
+                  }
+                  final String dateStr = p['published_at']?.toString() ?? p['created_at']?.toString() ?? '';
+                  return _ContentCard(
+                    image: imageUrl,
+                    title: p['story_title']?.toString() ?? 'Untitled',
+                    subtitle: p['story_description']?.toString() ?? '',
+                    views: p['views']?.toString() ?? '0',
+                    time: DateUtil.getTimeAgo(dateStr),
+                    overview: p['story_description']?.toString() ?? 'No content.',
+                    fullData: p,
+                  );
+                }).toList();
                 
                 return _buildBannerCardList(
                   cards: latestCards,
@@ -217,10 +278,13 @@ class _HomeScreenState extends State<HomeScreen> {
           onPressed: () => Scaffold.of(ctx).openDrawer(),
         ),
       ),
-      title: Image.asset(
-        'assets/images/Logo.png',
-        height: 32 * scale,
-        fit: BoxFit.contain,
+      title: Padding(
+        padding: EdgeInsets.only(top: 2 * scale),
+        child: Image.asset(
+          'assets/images/Trustory logo horizontal home screen.png',
+          height: 34 * scale,
+          fit: BoxFit.contain,
+        ),
       ),              
       centerTitle: true,
       actions: [
@@ -274,7 +338,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Image.asset(
                     slide.image,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
+                    errorBuilder: (_, _, _) => Container(
                      // color: const Color(0xFF7C348D).withOpacity(0.3),
                       child: const Center(
                        // child: Icon(Icons.image, color: Colors.white, size: 48),
@@ -384,11 +448,69 @@ class _HomeScreenState extends State<HomeScreen> {
             GestureDetector(
               onTap: () {
                 Widget screen;
-                if (title == 'Popular') {
-                  screen = PopularViewScreen(title: title);
-                } else {
-                  screen = RecommendViewScreen(title: title);
+                List<Map<String, dynamic>> storiesToPass = [];
+                
+                if (title == 'Popular' || title == 'Recommended For You' || title == 'Latest Upload') {
+                  final approved = _fullStoryApprovalProvider.approvedStories.where((story) {
+                    final status = story['status']?.toString().toLowerCase() ?? '';
+                    return status == 'approved' || status == '1';
+                  }).toList();
+
+                  if (title == 'Latest Upload') {
+                    approved.sort((a, b) {
+                      final String dateStrA = a['published_at']?.toString() ?? a['created_at']?.toString() ?? '';
+                      final String dateStrB = b['published_at']?.toString() ?? b['created_at']?.toString() ?? '';
+                      DateTime dateA = DateTime.fromMillisecondsSinceEpoch(0);
+                      DateTime dateB = DateTime.fromMillisecondsSinceEpoch(0);
+                      try {
+                        if (dateStrA.isNotEmpty) dateA = DateTime.parse(dateStrA);
+                      } catch (_) {}
+                      try {
+                        if (dateStrB.isNotEmpty) dateB = DateTime.parse(dateStrB);
+                      } catch (_) {}
+                      return dateB.compareTo(dateA);
+                    });
+                  }
+
+                  
+                  storiesToPass = approved.map((p) {
+                    String img = p['header_image']?.toString() ?? '';
+                    if (img.isEmpty) img = 'assets/images/bannar01.png';
+                    return {
+                      'image': img,
+                      'title': p['story_title']?.toString() ?? 'Untitled',
+                      'rating': double.tryParse(p['rating']?.toString() ?? '4.5') ?? 4.5,
+                      'views': p['views']?.toString() ?? '0',
+                      'isPremium': p['is_premium'] == true || p['is_premium'] == 'true' || p['is_premium'] == 1,
+                      'overview': p['story_description']?.toString() ?? 'No content.',
+                      ...p,
+                    };
+                  }).toList();
+                } else if (title == 'Recently Watched') {
+                  final history = HistoryManager().historyItems.where((story) {
+                    if (!story.containsKey('status')) return true;
+                    final status = story['status']?.toString().toLowerCase() ?? '';
+                    return status == 'approved' || status == '1';
+                  }).toList();
+                  
+                  storiesToPass = history.map((h) {
+                    return {
+                      'image': h['image'] ?? 'assets/images/bannar01.png',
+                      'title': h['title'] ?? 'Unknown Story',
+                      'views': h['views']?.toString() ?? '0',
+                      'rating': h['rating'] ?? 4.5,
+                      'overview': h['overview'] ?? '',
+                      ...h,
+                    };
+                  }).toList();
                 }
+
+                if (title == 'Popular' || title == 'Latest Upload' || title == 'Recently Watched') {
+                  screen = PopularViewScreen(title: title, categoryStories: storiesToPass);
+                } else {
+                  screen = RecommendViewScreen(title: title, categoryStories: storiesToPass);
+                }
+                
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => screen),
@@ -414,50 +536,60 @@ class _HomeScreenState extends State<HomeScreen> {
   // Popular / Recommended List
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildPopularList(double scale) {
-    final cards = [
-      _PopularCard(
-        image: 'assets/images/ratan_tata.png',
-        title: 'Ratan Tata: A Visionary Leader with a Heart of Gold',
-        rating: 4.8,
-        views: '100 k',
-        isPremium: false,
-        overview: 'Ratan Tata is a visionary Indian business leader who transformed the Tata Group into a global powerhouse. Known for his humility and philanthropy, his life story is one of resilience, values, and unwavering commitment to social good. From launching the affordable Nano car to leading major international acquisitions, he has shaped modern Indian industry while remaining a symbol of integrity.',
-      ),
-      _PopularCard(
-        image: 'assets/images/sundar.png',
-        title: 'Sundar Pichai: From a Small Town to Google\'s CEO',
-        rating: 4.9,
-        views: '110 k',
-        isPremium: true,
-        overview: 'Sundar Pichai\'s journey from his humble beginnings in Chennai to lead Google and Alphabet is a testament to the power of curiosity and hard work. As CEO, he has navigated the company through massive shifts in AI, cloud computing, and mobile technology, always focusing on making information universally accessible and useful. His calm leadership style is admired globally.',
-      ),
-      _PopularCard(
-        image: 'assets/images/narayan.png',
-        title: 'Narayana Murthy: The Architect of the IT Revolution',
-        rating: 4.7,
-        views: '110 k',
-        isPremium: false,
-        overview: 'Narayana Murthy co-founded Infosys and laid the foundation for India\'s IT services industry. He is celebrated for his philosophy of compassionate capitalism and his role in making Infosys a global model for corporate governance. His story is about building a world-class institution based on values and empowering thousands of professionals.',
-      ),
-      _PopularCard(
-        image: 'assets/images/sridhar.png',
-        title: 'Sridhar Vembu: The Boots-on-the-Ground Tech Pioneer',
-        rating: 4.7,
-        views: '110 k',
-        isPremium: false,
-        overview: 'Sridhar Vembu is the founder of Zoho, a company that competes with global tech giants while being based in rural India. He is a strong advocate for rural empowerment and self-reliance in technology. Zoho\'s success without external funding is a unique story of persistence, engineering excellence, and community-focused business building.',
-      ),
-    ];
+    return ListenableBuilder(
+      listenable: _fullStoryApprovalProvider,
+      builder: (context, _) {
+        if (_fullStoryApprovalProvider.isLoading) {
+          return SizedBox(
+            height: 240 * scale,
+            child: const Center(child: CircularProgressIndicator(color: Color(0xFF7C348D))),
+          );
+        }
 
-    return SizedBox(
-      height: 240 * scale,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: EdgeInsets.symmetric(horizontal: 12 * scale),
-        itemCount: cards.length,
-        itemBuilder: (context, index) =>
-            _buildPopularCard(cards[index], scale),
-      ),
+        final approvedStories = _fullStoryApprovalProvider.approvedStories.where((story) {
+          final status = story['status']?.toString().toLowerCase() ?? '';
+          return status == 'approved' || status == '1';
+        }).toList();
+
+        if (approvedStories.isEmpty) {
+          return SizedBox(
+            height: 240 * scale,
+            child: Center(
+              child: Text(
+                'No stories available.',
+                style: GoogleFonts.poppins(color: Colors.grey, fontSize: 13 * scale),
+              ),
+            ),
+          );
+        }
+
+        final cards = approvedStories.take(10).map((p) {
+          String imageUrl = p['header_image']?.toString() ?? '';
+          if (imageUrl.isEmpty) {
+            imageUrl = 'assets/images/bannar01.png'; // fallback image
+          }
+          return _PopularCard(
+            image: imageUrl,
+            title: p['story_title']?.toString() ?? 'Untitled',
+            rating: double.tryParse(p['rating']?.toString() ?? '4.5') ?? 4.5,
+            views: p['views']?.toString() ?? '0',
+            isPremium: p['is_premium'] == true || p['is_premium'] == 'true' || p['is_premium'] == 1,
+            overview: p['story_description']?.toString() ?? 'No content.',
+            fullData: p,
+          );
+        }).toList();
+
+        return SizedBox(
+          height: 240 * scale,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: EdgeInsets.symmetric(horizontal: 12 * scale),
+            itemCount: cards.length,
+            itemBuilder: (context, index) =>
+                _buildPopularCard(cards[index], scale),
+          ),
+        );
+      },
     );
   }
 
@@ -478,7 +610,7 @@ class _HomeScreenState extends State<HomeScreen> {
           context,
           MaterialPageRoute(
             builder: (context) => StoryDetailScreen(
-              storyData: {
+              storyData: card.fullData ?? {
                 'image': card.image,
                 'title': card.title,
                 'bannerTitle': card.title.split(' ')[0],
@@ -513,29 +645,47 @@ class _HomeScreenState extends State<HomeScreen> {
                 ClipRRect(
                   borderRadius:
                       BorderRadius.vertical(top: Radius.circular(12 * scale)),
-                  child: card.image.startsWith('assets/')
-                    ? Image.asset(
-                        card.image,
+                  child: card.image.isEmpty
+                    ? Container(
                         height: 160 * scale,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          height: 160 * scale,
-                          color: Colors.grey[200],
-                          child: Icon(Icons.person, size: 48 * scale, color: Colors.grey),
-                        ),
+                        color: Colors.grey[200],
+                        child: Icon(Icons.person, size: 48 * scale, color: Colors.grey),
                       )
-                    : Image.file(
-                        File(card.image),
-                        height: 160 * scale,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          height: 160 * scale,
-                          color: Colors.grey[200],
-                          child: Icon(Icons.person, size: 48 * scale, color: Colors.grey),
-                        ),
-                      ),
+                    : card.image.startsWith('http')
+                        ? Image.network(
+                            card.image,
+                            height: 160 * scale,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => Container(
+                              height: 160 * scale,
+                              color: Colors.grey[200],
+                              child: Icon(Icons.person, size: 48 * scale, color: Colors.grey),
+                            ),
+                          )
+                        : card.image.startsWith('assets/')
+                            ? Image.asset(
+                                card.image,
+                                height: 160 * scale,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, _, _) => Container(
+                                  height: 160 * scale,
+                                  color: Colors.grey[200],
+                                  child: Icon(Icons.person, size: 48 * scale, color: Colors.grey),
+                                ),
+                              )
+                            : Image.file(
+                                File(card.image),
+                                height: 160 * scale,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, _, _) => Container(
+                                  height: 160 * scale,
+                                  color: Colors.grey[200],
+                                  child: Icon(Icons.person, size: 48 * scale, color: Colors.grey),
+                                ),
+                              ),
                 ),
                 if (card.isPremium)
                   Positioned(
@@ -697,31 +847,44 @@ class _HomeScreenState extends State<HomeScreen> {
                 ClipRRect(
                   borderRadius:
                       BorderRadius.vertical(top: Radius.circular(14 * scale)),
-                  child: card.image.startsWith('assets/')
-                    ? Image.asset(
+                  child: card.image.startsWith('http')
+                    ? Image.network(
                         card.image,
                         height: 165 * scale,
                         width: double.infinity,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
+                        errorBuilder: (_, _, _) => Container(
                           height: 165 * scale,
                           color: Colors.grey[200],
                           child: Icon(Icons.image_not_supported_outlined,
                               size: 48 * scale, color: Colors.grey),
                         ),
                       )
-                    : Image.file(
-                        File(card.image),
-                        height: 165 * scale,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
+                    : card.image.startsWith('assets/')
+                      ? Image.asset(
+                          card.image,
                           height: 165 * scale,
-                          color: Colors.grey[200],
-                          child: Icon(Icons.image_not_supported_outlined,
-                              size: 48 * scale, color: Colors.grey),
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => Container(
+                            height: 165 * scale,
+                            color: Colors.grey[200],
+                            child: Icon(Icons.image_not_supported_outlined,
+                                size: 48 * scale, color: Colors.grey),
+                          ),
+                        )
+                      : Image.file(
+                          File(card.image),
+                          height: 165 * scale,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => Container(
+                            height: 165 * scale,
+                            color: Colors.grey[200],
+                            child: Icon(Icons.image_not_supported_outlined,
+                                size: 48 * scale, color: Colors.grey),
+                          ),
                         ),
-                      ),
                 ),
                 Positioned(
                   top: 8 * scale,
@@ -769,6 +932,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   SizedBox(height: 8 * scale),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       Icon(Icons.visibility_outlined,
                           color: Colors.grey, size: 13 * scale),
@@ -778,10 +942,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: GoogleFonts.poppins(
                             fontSize: 11 * scale, color: Colors.grey),
                       ),
-                      const Spacer(),
-                      Icon(Icons.access_time_rounded,
-                          color: Colors.grey, size: 13 * scale),
-                      SizedBox(width: 4 * scale),
+                      SizedBox(width: 16 * scale),
                       Text(
                         card.time,
                         style: GoogleFonts.poppins(
@@ -986,6 +1147,7 @@ class _PopularCard {
   final String views;
   final bool isPremium;
   final String overview;
+  final Map<String, dynamic>? fullData;
   const _PopularCard({
     required this.image,
     required this.title,
@@ -993,6 +1155,7 @@ class _PopularCard {
     required this.views,
     this.isPremium = false,
     required this.overview,
+    this.fullData,
   });
 }
 

@@ -6,6 +6,7 @@ import '../../utils/guest_manager.dart';
 import '../OnboardingScreen/login_screen.dart';
 import '../../widgets/story_options_sheet.dart';
 import '../../utils/post_manager.dart';
+import '../../Provider/full_story_approval_provider.dart';
 
 class CategoryDetailScreen extends StatefulWidget {
   final String categoryName;
@@ -19,6 +20,13 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
   String _searchQuery = '';
+  final FullStoryApprovalProvider _fullStoryApprovalProvider = FullStoryApprovalProvider();
+
+  @override
+  void initState() {
+    super.initState();
+    _fullStoryApprovalProvider.fetchApprovedStories(category: widget.categoryName);
+  }
 
   @override
   void dispose() {
@@ -268,23 +276,26 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
     };
 
     // Get hardcoded stories
-    List<Map<String, dynamic>> stories = List.from(categoryData[widget.categoryName] ?? []);
+    List<Map<String, dynamic>> stories = [];
     
-    // Add uploaded stories matching this category
-    final uploaded = PostManager().uploadedPosts.value
-        .where((p) => p['category'] == widget.categoryName)
+    // Add approved stories matching this category from the API
+    final apiStories = _fullStoryApprovalProvider.approvedStories
         .map((p) => {
           ...p,
-          'type': 'large', // Uploaded stories show in "Recently Upload" section
-          'subtitle': p['description'] ?? '',
+          'type': 'large',
+          'subtitle': p['story_description'] ?? '',
           'time': 'Just now',
-          'rating': p['rating'] ?? 4.5,
+          'rating': 4.5,
           'views': p['views'] ?? '0',
-          'isPremium': p['isPremium'] ?? false,
-          'bannerTitle': p['bannerTitle'] ?? 'STORY',
+          'isPremium': false,
+          'bannerTitle': p['category']?.toString().toUpperCase() ?? 'STORY',
+          'image': (p['header_image'] != null && p['header_image'].toString().isNotEmpty) 
+              ? p['header_image'] 
+              : 'assets/images/bannar01.png',
+          'title': p['story_title'] ?? 'Untitled',
         }).toList();
     
-    stories.insertAll(0, uploaded);
+    stories.insertAll(0, apiStories);
     
     // Ensure all stories have at least a basic description/overview for the reader
     stories = stories.map((s) => {
@@ -293,17 +304,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
     }).toList();
 
     if (stories.isEmpty) {
-      stories = [
-        {
-          'type': 'popular',
-          'image': 'assets/images/ratan_tata.png',
-          'title': 'Interesting stories in ${widget.categoryName}',
-          'rating': 4.5,
-          'views': '50 k',
-          'isPremium': false,
-          'bannerTitle': 'STORY',
-        }
-      ];
+      // Return empty if no stories are fetched from the API
     }
 
     if (_searchQuery.isEmpty) return stories;
@@ -315,9 +316,9 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
     final double w = MediaQuery.of(context).size.width;
     final double scale = (w / 360).clamp(0.8, 1.4);
 
-    return ValueListenableBuilder<List<Map<String, dynamic>>>(
-      valueListenable: PostManager().uploadedPosts,
-      builder: (context, uploadedPosts, child) {
+    return ListenableBuilder(
+      listenable: _fullStoryApprovalProvider,
+      builder: (context, child) {
         final filteredStories = _getMergedStories();
 
         return Scaffold(
@@ -368,30 +369,32 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
               ),
             ],
           ),
-          body: filteredStories.isEmpty
-              ? Center(
-                  child: Text(
-                    'No stories found',
-                    style: GoogleFonts.poppins(color: Colors.grey, fontSize: 14 * scale),
-                  ),
-                )
-              : GridView.builder(
-                  padding: EdgeInsets.all(12 * scale),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.8,
-                    crossAxisSpacing: 12 * scale,
-                    mainAxisSpacing: 12 * scale,
-                  ),
-                  itemCount: filteredStories.length,
-                  itemBuilder: (context, index) {
-                    final s = filteredStories[index];
-                    return _buildGridCard(
-                      storyData: s,
-                      scale: scale,
-                    );
-                  },
-                ),
+          body: _fullStoryApprovalProvider.isLoading
+              ? const Center(child: CircularProgressIndicator(color: Color(0xFF7C348D)))
+              : filteredStories.isEmpty
+                  ? Center(
+                      child: Text(
+                        'No stories found',
+                        style: GoogleFonts.poppins(color: Colors.grey, fontSize: 14 * scale),
+                      ),
+                    )
+                  : GridView.builder(
+                      padding: EdgeInsets.all(12 * scale),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 0.8,
+                        crossAxisSpacing: 12 * scale,
+                        mainAxisSpacing: 12 * scale,
+                      ),
+                      itemCount: filteredStories.length,
+                      itemBuilder: (context, index) {
+                        final s = filteredStories[index];
+                        return _buildGridCard(
+                          storyData: s,
+                          scale: scale,
+                        );
+                      },
+                    ),
         );
       },
     );
@@ -453,13 +456,21 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => _buildErrorImage(110 * scale),
                         )
-                      : Image.asset(
-                          image,
-                          width: double.infinity,
-                          height: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _buildErrorImage(110 * scale),
-                        ),
+                      : image.startsWith('http')
+                        ? Image.network(
+                            image,
+                            width: double.infinity,
+                            height: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _buildErrorImage(110 * scale),
+                          )
+                        : Image.asset(
+                            image,
+                            width: double.infinity,
+                            height: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _buildErrorImage(110 * scale),
+                          ),
                   ),
                   // White Circle Indicator (Top Left) - As seen in the image
                   Positioned(

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/custom_bottom_nav.dart';
 import '../Category/category_screen.dart';
 import '../setting/settings_screen.dart';
+import '../../Provider/profile_provider.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key}); 
@@ -11,11 +12,37 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  final TextEditingController _nameController = TextEditingController(text: 'Sowmiya');
-  final TextEditingController _usernameController = TextEditingController(text: 'Sowmi_222');
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _mobileNumberController = TextEditingController();
   final TextEditingController _bioController = TextEditingController();
   final TextEditingController _linkController = TextEditingController();
   final TextEditingController _genderController = TextEditingController();
+  
+  final ProfileProvider _profileProvider = ProfileProvider();
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchAndPopulateProfile();
+  }
+
+  Future<void> _fetchAndPopulateProfile() async {
+    await _profileProvider.fetchProfile();
+    final data = _profileProvider.profileData;
+    if (data != null) {
+      if (mounted) {
+        setState(() {
+          _nameController.text = data['name']?.toString() ?? _nameController.text;
+          _usernameController.text = data['username']?.toString() ?? _usernameController.text;
+          _mobileNumberController.text = data['mobile_number']?.toString() ?? _mobileNumberController.text;
+          _bioController.text = data['bio']?.toString() ?? _bioController.text;
+          _linkController.text = data['link']?.toString() ?? _linkController.text;
+          _genderController.text = data['gender']?.toString() ?? _genderController.text;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,55 +78,36 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           padding: EdgeInsets.all(20 * scale),
           child: Column(
             children: [
-              // Profile Picture Section
-              Center(
-                child: Column(
-                  children: [
-                    Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Container(
-                          width: 90 * scale,
-                          height: 90 * scale,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            image: const DecorationImage(
-                              image: NetworkImage('https://i.pravatar.cc/150?u=sowmiya'),
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ),
-                        // Figma tick icon on the far right of the profile picture area
-                        Positioned(
-                          right: -w * 0.35,
-                          child: GestureDetector(
-                            onTap: () => Navigator.of(context).pop(),
-                            child: Icon(Icons.check, color: const Color(0xFF7C348D), size: 24 * scale),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 8 * scale),
-                    Text(
-                      'Edit Picture',
-                      style: GoogleFonts.poppins(
-                        fontSize: 13 * scale,
-                        color: const Color(0xFF7C348D),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-              SizedBox(height: 24 * scale),
-              
               // Input Fields
-              _buildInputField('Name :', _nameController, scale),
-              _buildInputField('Username :', _usernameController, scale),
-              _buildInputField('Bio :', _bioController, scale),
-              _buildInputField('Add Link :', _linkController, scale),
-              _buildInputField('Gender :', _genderController, scale),
+              ListenableBuilder(
+                listenable: _profileProvider,
+                builder: (context, child) {
+                  if (_profileProvider.isLoading) {
+                    return Padding(
+                      padding: EdgeInsets.symmetric(vertical: 40 * scale),
+                      child: const CircularProgressIndicator(color: Color(0xFF7C348D)),
+                    );
+                  }
+                  return Column(
+                    children: [
+                      if (_profileProvider.errorMessage != null)
+                        Padding(
+                          padding: EdgeInsets.only(bottom: 20 * scale),
+                          child: Text(
+                            _profileProvider.errorMessage!,
+                            style: TextStyle(color: Colors.red, fontSize: 13 * scale),
+                          ),
+                        ),
+                      _buildInputField('Name :', _nameController, scale),
+                      _buildInputField('Username :', _usernameController, scale),
+                      _buildInputField('Mobile Number :', _mobileNumberController, scale),
+                      _buildInputField('Bio :', _bioController, scale),
+                      _buildInputField('Add Link :', _linkController, scale),
+                      _buildInputField('Gender :', _genderController, scale),
+                    ],
+                  );
+                },
+              ),
               
               SizedBox(height: 40 * scale),
             ],

@@ -37,7 +37,10 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
     final double w = MediaQuery.of(context).size.width;
     final double scale = (w / 360).clamp(0.8, 1.4);
     final bool isLocalFile = storyData['isLocalFile'] ?? false;
-    final String imagePath = storyData['image'] ?? 'assets/images/sundar.png';
+    String imagePath = storyData['image']?.toString().trim() ?? storyData['header_image']?.toString().trim() ?? '';
+    if (imagePath.isEmpty) {
+      imagePath = 'assets/images/bannar01.png';
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -55,12 +58,35 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
                         height: 380 * scale,
                         fit: BoxFit.cover,
                       )
-                    : Image.asset(
-                        imagePath,
-                        width: double.infinity,
-                        height: 380 * scale,
-                        fit: BoxFit.cover,
-                      ),
+                    : (imagePath.startsWith('http') || imagePath.startsWith('https')
+                        ? Image.network(
+                            imagePath,
+                            width: double.infinity,
+                            height: 380 * scale,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                width: double.infinity,
+                                height: 380 * scale,
+                                color: Colors.grey[300],
+                                child: const Icon(Icons.broken_image, size: 50, color: Colors.grey),
+                              );
+                            },
+                          )
+                        : Image.asset(
+                            imagePath,
+                            width: double.infinity,
+                            height: 380 * scale,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                width: double.infinity,
+                                height: 380 * scale,
+                                color: Colors.grey[300],
+                                child: const Icon(Icons.broken_image, size: 50, color: Colors.grey),
+                              );
+                            },
+                          )),
                 // Gradient Overlay
                 Positioned.fill(
                   child: Container(
@@ -77,24 +103,30 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
                     ),
                   ),
                 ),
-                // Heading Text "SUNDAR"
+                // Heading Text
                 Positioned(
                   top: 40 * scale,
                   left: 0,
                   right: 0,
                   child: Center(
-                    child: Text(
-                      storyData['bannerTitle'] ?? 'SUNDAR',
-                      style: GoogleFonts.cinzel(
-                        fontSize: 32 * scale,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFFC7E9E7),
-                        letterSpacing: 4,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Text(
+                        (storyData['title'] ?? storyData['story_title'] ?? 'UNTITLED').toString().toUpperCase(),
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.cinzel(
+                          fontSize: 19 * scale,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFFC7E9E7),
+                          letterSpacing: 2,
+                        ),
                       ),
                     ),
                   ),
                 ),
-                // Bottom Text "GOOGLE TO CEO"
+                // Bottom Text
                 Positioned(
                   bottom: 20 * scale,
                   left: 0,
@@ -102,16 +134,16 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _buildBannerFooterItem('GOOGLE', '2015', scale),
-                      _buildBannerFooterItem('TO', 'TO', scale),
-                      _buildBannerFooterItem('CEO', '2024', scale),
+                      _buildBannerFooterItem('VIEWS', storyData['views']?.toString() ?? '0', scale),
+                      _buildBannerFooterItem('RATING', storyData['rating']?.toString() ?? '4.5', scale),
+                      _buildBannerFooterItem('CATEGORY', storyData['category']?.toString().toUpperCase() ?? 'STORY', scale),
                     ],
                   ),
                 ),
                 // Back Button
                 Positioned(
                   top: 40 * scale,
-                  left: 10 * scale,
+                  left: 0,
                   child: IconButton(
                     icon: const Icon(Icons.arrow_back, color: Colors.white),
                     onPressed: () => Navigator.pop(context),
@@ -123,18 +155,6 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
                   right: 10 * scale,
                   child: Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFFFD700),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.workspace_premium,
-                          size: 18 * scale,
-                          color: Colors.white,
-                        ),
-                      ),
                       IconButton(
                         icon: const Icon(Icons.more_vert, color: Colors.white),
                         onPressed: () => showStoryOptions(
@@ -178,7 +198,7 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
                   Icon(Icons.star, color: Colors.amber, size: 14 * scale),
                   SizedBox(width: 2 * scale),
                   Text(
-                    '4.6(50K)',
+                    '${storyData['rating'] ?? '4.5'}(${storyData['rating_count'] ?? '0'})',
                     style: GoogleFonts.poppins(
                       fontSize: 10 * scale,
                       fontWeight: FontWeight.bold,
@@ -188,7 +208,7 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
                   Icon(Icons.menu_book, color: Colors.grey, size: 14 * scale),
                   SizedBox(width: 2 * scale),
                   Text(
-                    '1M',
+                    '${storyData['views'] ?? '0'}',
                     style: GoogleFonts.poppins(
                       fontSize: 10 * scale,
                       fontWeight: FontWeight.bold,
@@ -252,20 +272,38 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const AuthorProfileScreen(
-                                  authorName: 'Tamilarasi',
-                                ),
+                                builder: (context) {
+                                  String name = storyData['author_name']?.toString() ?? '';
+                                  if (name.isEmpty || name == 'User') name = storyData['name']?.toString() ?? name;
+                                  if (name.isEmpty || name == 'User') name = storyData['user_name']?.toString() ?? name;
+                                  if (name.isEmpty || name == 'User') name = storyData['author']?.toString() ?? name;
+                                  if (name.isEmpty) name = 'Unknown';
+                                  
+                                  return AuthorProfileScreen(
+                                    authorName: name,
+                                  );
+                                },
                               ),
                             );
                           },
-                          child: Text(
-                            'Tamilarasi',
-                            style: GoogleFonts.poppins(
-                              color: const Color(0xFF008080),
-                              decoration: TextDecoration.underline,
-                              fontSize: 13 * scale,
-                              fontWeight: FontWeight.w500,
-                            ),
+                          child: Builder(
+                            builder: (context) {
+                                  String name = storyData['author_name']?.toString() ?? '';
+                                  if (name.isEmpty || name == 'User') name = storyData['name']?.toString() ?? name;
+                                  if (name.isEmpty || name == 'User') name = storyData['user_name']?.toString() ?? name;
+                                  if (name.isEmpty || name == 'User') name = storyData['author']?.toString() ?? name;
+                                  if (name.isEmpty) name = 'Unknown';
+                                  
+                              return Text(
+                                name,
+                                style: GoogleFonts.poppins(
+                                  color: const Color(0xFF008080),
+                                  decoration: TextDecoration.underline,
+                                  fontSize: 13 * scale,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              );
+                            },
                           ),
                         ),
                       ),
@@ -278,7 +316,7 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
             // ── Content Section ──────────────────────────────────────────
             Center(
               child: Text(
-                storyData['title']?.toUpperCase() ?? 'SUNDAR PICHAI',
+                (storyData['title'] ?? storyData['story_title'] ?? 'UNTITLED').toString().toUpperCase(),
                 textAlign: TextAlign.center,
                 style: GoogleFonts.poppins(
                   fontSize: 18 * scale,
@@ -303,8 +341,9 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
                   ),
                   SizedBox(height: 10 * scale),
                   Text(
-                    storyData['overview'] ??
-                        'Sundar Pichai’s life is an inspiring journey from humble beginnings to leading one of the world’s top technology companies, Google. Born into a middle-class family in India, he shaped his path through education, hard work, and innovation. After joining Google, his contributions to key products like Chrome, Android, and Google Drive transformed the way billions of people use technology. Appointed as Google’s CEO in 2019, he is known for his calm leadership, user-focused thinking, and long-term vision. His story reflects perseverance, simplicity, and values-driven succe.. ',
+                    (storyData['overview']?.toString().trim().isNotEmpty == true ? storyData['overview'] : null) ?? 
+                    (storyData['story_description']?.toString().trim().isNotEmpty == true ? storyData['story_description'] : null) ??
+                        'No description available.',
                     style: GoogleFonts.poppins(
                       fontSize: 13 * scale,
                       color: Colors.black.withValues(alpha: 0.85),
@@ -338,7 +377,12 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
 
             // ── Bottom Button ────────────────────────────────────────────
             Padding(
-              padding: EdgeInsets.all(24 * scale),
+              padding: EdgeInsets.fromLTRB(
+                24 * scale, 
+                24 * scale, 
+                24 * scale, 
+                24 * scale + MediaQuery.of(context).padding.bottom
+              ),
               child: ElevatedButton(
                 onPressed: () {
                   Navigator.push(

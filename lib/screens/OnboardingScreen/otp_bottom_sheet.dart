@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:true_story/screens/homescreen/home_screen.dart';
 import '../../utils/guest_manager.dart';
@@ -9,7 +11,8 @@ import '../../shared_preference.dart';
 class OTPBottomSheet extends StatefulWidget {
   final String maskedPhone;
   final String phone;
-  const OTPBottomSheet({super.key, required this.maskedPhone, required this.phone});
+  final String authorName;
+  const OTPBottomSheet({super.key, required this.maskedPhone, required this.phone, this.authorName = 'User'});
 
   @override
   State<OTPBottomSheet> createState() => _OTPBottomSheetState();
@@ -95,12 +98,35 @@ class _OTPBottomSheetState extends State<OTPBottomSheet> {
     );
 
     if (success) {
+      String fetchedName = widget.authorName;
+      try {
+        final Uri url = Uri.parse('https://truestory.ai.in/ai/api/m_api/');
+        final response = await http.post(url, body: {
+          'type': '2508',
+          'cid': finalCid,
+          'mobile_number': widget.phone,
+          'device_id': finalDeviceId,
+          'lt': finalLt.toString(),
+          'ln': finalLn.toString(),
+        });
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          if (data['error'] == false) {
+             final profile = data['profile'] ?? data['data'] ?? data;
+             if (profile['author_name'] != null && profile['author_name'].toString().trim().isNotEmpty) {
+                fetchedName = profile['author_name'].toString().trim();
+             }
+          }
+        }
+      } catch (_) {}
+
       await SessionManager.saveLoginSession(
         cid: int.tryParse(finalCid) ?? 21472147,
         uid: widget.phone, // using phone as uid for now
-        userName: 'User',
+        userName: fetchedName,
         authToken: 'dummy_token', // real token can be parsed from API if needed
       );
+
       
       await GuestManager().clearGuestData();
       if (mounted) {

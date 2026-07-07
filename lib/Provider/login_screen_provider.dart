@@ -9,6 +9,9 @@ class LoginScreenProvider extends ChangeNotifier {
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
 
+  String? _authorName;
+  String? get authorName => _authorName;
+
   Future<bool> requestOtp({
     required String mobile,
     required String cid,
@@ -60,6 +63,10 @@ class LoginScreenProvider extends ChangeNotifier {
             _errorMessage = data['error_msg'] ?? 'Failed to request OTP.';
             notifyListeners();
             return false;
+          }
+          
+          if (data['author_name'] != null) {
+            _authorName = data['author_name'].toString().trim();
           }
         } catch (_) {}
         // Success

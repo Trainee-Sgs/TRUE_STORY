@@ -6,6 +6,7 @@ import 'feedback_screen.dart';
 import 'history_screen.dart';
 import 'notification_screen.dart';
 import '../setting/downloads_screen.dart';
+import '../../shared_preference.dart';
 
 
 class AppDrawer extends StatelessWidget {
@@ -35,7 +36,7 @@ class AppDrawer extends StatelessWidget {
                 // Logo
                 Expanded(
                   child: Image.asset(
-                    'assets/images/Logo.png',
+                    'assets/images/Trustory logo horizontal home screen.png',
                     height: 38,
                     fit: BoxFit.contain,
                     alignment: Alignment.centerLeft,
@@ -179,7 +180,7 @@ class AppDrawer extends StatelessWidget {
           // ── Logout Button ─────────────────────────────────────────
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 36),
+            padding: EdgeInsets.fromLTRB(20, 12, 20, 24 + MediaQuery.of(context).padding.bottom),
             child: SizedBox(
               width: double.infinity,
               height: 50,
@@ -323,15 +324,18 @@ class AppDrawer extends StatelessWidget {
                   // Yes Button
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {
-                        // Close dialog and drawer, then navigate to login
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>  LoginScreen(),
-                          ),
-                          (route) => false,
-                        );
+                      onPressed: () async {
+                        // Close dialog and drawer, clear session, then navigate to login
+                        await SessionManager.logout();
+                        if (context.mounted) {
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>  LoginScreen(),
+                            ),
+                            (route) => false,
+                          );
+                        }
                       },
                       style: ElevatedButton.styleFrom(                                                                                                                                                                                                                                                                                                                                                                                                                                                        
                         backgroundColor: const Color(0xFFE52D27), // Red color

@@ -75,7 +75,7 @@ class _LogoState extends State<Logo>
           child: ScaleTransition(
             scale: _scaleAnimation,
             child: Image.asset(
-              'assets/images/Logo.png',
+              'assets/images/Trustory logo horizontal home screen.png',
               width: 280 * scale,
               fit: BoxFit.contain,
             ),

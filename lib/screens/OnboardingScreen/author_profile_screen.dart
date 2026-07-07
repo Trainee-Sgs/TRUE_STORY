@@ -66,33 +66,37 @@ class AuthorProfileScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const FollowersFollowingScreen(title: 'Followers', isReadOnly: true),
+                  SizedBox(width: 16 * scale),
+                  Expanded(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const FollowersFollowingScreen(title: 'Followers', isReadOnly: true),
+                              ),
+                            );
+                          },
+                          child: _buildStatItem('Followers', '50k', scale),
                         ),
-                      );
-                    },
-                    child: _buildStatItem('Followers', '50k', scale),
-                  ),
-                  SizedBox(width: 25 * scale),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const FollowersFollowingScreen(title: 'Following', isReadOnly: true),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const FollowersFollowingScreen(title: 'Following', isReadOnly: true),
+                              ),
+                            );
+                          },
+                          child: _buildStatItem('Following', '15k', scale),
                         ),
-                      );
-                    },
-                    child: _buildStatItem('Following', '15k', scale),
+                        _buildStatItem('Story', '10', scale),
+                      ],
+                    ),
                   ),
-                  SizedBox(width: 25 * scale),
-                  _buildStatItem('Story', '10', scale),
-                  const Spacer(),
                 ],
               ),
             ),

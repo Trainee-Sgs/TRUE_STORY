@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'story_detail_screen.dart';
 import '../../utils/guest_manager.dart';
+import '../../screens/menuscreens/notification_screen.dart';
+import '../../utils/date_util.dart';
 import '../OnboardingScreen/login_screen.dart';
 import 'popular_view.dart';
 import 'recommend_view.dart';
 import '../../widgets/story_options_sheet.dart';
+import '../../Provider/full_story_approval_provider.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -16,6 +19,25 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final FullStoryApprovalProvider _fullStoryApprovalProvider = FullStoryApprovalProvider();
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _fullStoryApprovalProvider.fetchApprovedStories();
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text.toLowerCase();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -91,63 +113,55 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
             ),
 
-            // ── Recommended For You ──────────────────────────────
-            _buildSectionHeader('Recommended For You', scale, showViewAll: true),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12 * scale),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _buildPopularCard(
-                      image: 'assets/images/ratan_tata.png',
-                      title: 'Ratan Tata is a visionary Indian business leader....',
-                      rating: 4.8,
-                      views: '100 k',
-                      isPremium: false,
-                      scale: scale,
-                    ),
-                  ),
-                  Expanded(
-                    child: _buildPopularCard(
-                      image: 'assets/images/sundar.png',
-                      title: 'became Google\'s CEO and leads it with vision and....',
-                      rating: 4.9,
-                      views: '110 k',
-                      isPremium: true,
-                      scale: scale,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            ListenableBuilder(
+              listenable: _fullStoryApprovalProvider,
+              builder: (context, _) {
+                if (_fullStoryApprovalProvider.isLoading) {
+                  return const Center(child: CircularProgressIndicator(color: Color(0xFF7C348D)));
+                }
 
-            SizedBox(height: 20 * scale),
+                final approvedStories = _fullStoryApprovalProvider.approvedStories.where((story) {
+                  final status = story['status']?.toString().toLowerCase() ?? '';
+                  if (status != 'approved' && status != '1') return false;
+                  
+                  if (_searchQuery.isNotEmpty) {
+                    final title = story['story_title']?.toString().toLowerCase() ?? '';
+                    if (!title.contains(_searchQuery)) return false;
+                  }
+                  return true;
+                }).toList();
 
-            // ── Recently Upload ────────────────────────────────────
-            _buildSectionHeader('Recently Upload', scale, showViewAll: false),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.symmetric(horizontal: 12 * scale),
-              child: Row(
-                children: [
-                  _buildLargeCard(
-                    image: 'assets/images/bannar01.png',
-                    title: 'Ratan Tata: A Visionary Leader with Inte...',
-                    subtitle: 'Ratan Tata built a global Tata Group with integrity and vision.',
-                    views: '1M',
-                    time: '4 Year ago',
-                    scale: scale,
-                  ),
-                  _buildLargeCard(
-                    image: 'assets/images/bannar02.png',
-                    title: 'Elon Musk: A Bold Innovator and Risk-Taker',
-                    subtitle: 'Drive into the future with Elon Musk\'s SpaceX and Tesla.',
-                    views: '2M',
-                    time: '1 Year ago',
-                    scale: scale,
-                  ),
-                ],
-              ),
+                if (approvedStories.isEmpty) {
+                  return Padding(
+                    padding: EdgeInsets.all(20 * scale),
+                    child: Center(
+                      child: Text('No stories found.', style: GoogleFonts.poppins(color: Colors.grey)),
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: approvedStories.length,
+                  itemBuilder: (context, index) {
+                    final p = approvedStories[index];
+                    String imageUrl = p['header_image']?.toString() ?? '';
+                    if (imageUrl.isEmpty) {
+                      imageUrl = 'assets/images/bannar01.png';
+                    }
+                    final String dateStr = p['published_at']?.toString() ?? p['created_at']?.toString() ?? '';
+                    return _buildLargeCard(
+                      image: imageUrl,
+                      title: p['story_title']?.toString() ?? 'Untitled',
+                      subtitle: p['story_description']?.toString() ?? '',
+                      views: p['views']?.toString() ?? '0',
+                      time: DateUtil.getTimeAgo(dateStr),
+                      scale: scale,
+                    );
+                  },
+                );
+              },
             ),
             SizedBox(height: 30 * scale),
           ],
@@ -174,10 +188,33 @@ class _SearchScreenState extends State<SearchScreen> {
             GestureDetector(
               onTap: () {
                 Widget screen;
+                List<Map<String, dynamic>> storiesToPass = [];
+                
+                if (title == 'Recommended For You' || title == 'Popular') {
+                  final approved = _fullStoryApprovalProvider.approvedStories.where((story) {
+                    final status = story['status']?.toString().toLowerCase() ?? '';
+                    return status == 'approved' || status == '1';
+                  }).toList();
+                  
+                  storiesToPass = approved.map((p) {
+                    String img = p['header_image']?.toString() ?? '';
+                    if (img.isEmpty) img = 'assets/images/bannar01.png';
+                    return {
+                      'image': img,
+                      'title': p['story_title']?.toString() ?? 'Untitled',
+                      'rating': double.tryParse(p['rating']?.toString() ?? '4.5') ?? 4.5,
+                      'views': p['views']?.toString() ?? '0',
+                      'isPremium': p['is_premium'] == true || p['is_premium'] == 'true' || p['is_premium'] == 1,
+                      'overview': p['story_description']?.toString() ?? 'No content.',
+                      ...p,
+                    };
+                  }).toList();
+                }
+
                 if (title == 'Recommended For You') {
-                  screen = RecommendViewScreen(title: title);
+                  screen = RecommendViewScreen(title: title, categoryStories: storiesToPass);
                 } else {
-                  screen = PopularViewScreen(title: title);
+                  screen = PopularViewScreen(title: title, categoryStories: storiesToPass);
                 }
                 Navigator.push(
                   context,
@@ -243,7 +280,7 @@ class _SearchScreenState extends State<SearchScreen> {
           borderRadius: BorderRadius.circular(12 * scale),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -256,12 +293,31 @@ class _SearchScreenState extends State<SearchScreen> {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.vertical(top: Radius.circular(12 * scale)),
-                  child: Image.asset(
-                    image,
-                    height: 110 * scale,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
+                  child: image.trim().startsWith('http') || image.trim().startsWith('https')
+                      ? Image.network(
+                          image.trim(),
+                          height: 110 * scale,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            height: 110 * scale,
+                            width: double.infinity,
+                            color: Colors.grey[200],
+                            child: const Icon(Icons.broken_image, color: Colors.grey),
+                          ),
+                        )
+                      : Image.asset(
+                          image.trim(),
+                          height: 110 * scale,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            height: 110 * scale,
+                            width: double.infinity,
+                            color: Colors.grey[200],
+                            child: const Icon(Icons.broken_image, color: Colors.grey),
+                          ),
+                        ),
                 ),
                 Positioned(
                   top: 8 * scale,
@@ -395,7 +451,7 @@ class _SearchScreenState extends State<SearchScreen> {
           borderRadius: BorderRadius.circular(16 * scale),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -408,12 +464,31 @@ class _SearchScreenState extends State<SearchScreen> {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.vertical(top: Radius.circular(16 * scale)),
-                  child: Image.asset(
-                    image,
-                    height: 140 * scale,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
+                  child: image.trim().startsWith('http') || image.trim().startsWith('https')
+                      ? Image.network(
+                          image.trim(),
+                          height: 140 * scale,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            height: 140 * scale,
+                            width: double.infinity,
+                            color: Colors.grey[200],
+                            child: const Icon(Icons.broken_image, color: Colors.grey),
+                          ),
+                        )
+                      : Image.asset(
+                          image.trim(),
+                          height: 140 * scale,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            height: 140 * scale,
+                            width: double.infinity,
+                            color: Colors.grey[200],
+                            child: const Icon(Icons.broken_image, color: Colors.grey),
+                          ),
+                        ),
                 ),
                 Positioned(
                   top: 10 * scale,
@@ -470,6 +545,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   ),
                   SizedBox(height: 8 * scale),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       Icon(
                         Icons.visibility_outlined, 
@@ -485,7 +561,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const Spacer(),
+                      SizedBox(width: 16 * scale),
                       Text(
                         time,
                         style: GoogleFonts.poppins(fontSize: 10 * scale, color: Colors.grey),

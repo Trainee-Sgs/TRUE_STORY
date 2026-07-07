@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'edit_profile_screen.dart';
+// import 'edit_profile_screen.dart';
 import 'upload_story_screen.dart';
 import '../Category/category_screen.dart';
 import '../../utils/guest_manager.dart';
@@ -14,6 +14,7 @@ import '../../widgets/story_options_sheet.dart';
 import '../../utils/post_manager.dart';
 import '../setting/followers_following_screen.dart';
 import '../../utils/like_manager.dart';
+import '../../Provider/story_status_provider.dart';
 
 class ForYouScreen extends StatefulWidget {
   const ForYouScreen({super.key});
@@ -23,6 +24,14 @@ class ForYouScreen extends StatefulWidget {
 }
 
 class _ForYouScreenState extends State<ForYouScreen> {
+  final StoryStatusProvider _storyStatusProvider = StoryStatusProvider();
+
+  @override
+  void initState() {
+    super.initState();
+    _storyStatusProvider.fetchUserStories();
+  }
+
   @override
   Widget build(BuildContext context) {
     final double w = MediaQuery.of(context).size.width;
@@ -50,150 +59,8 @@ class _ForYouScreenState extends State<ForYouScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Profile Header ──────────────────────────────────────────
-            Padding(
-              padding: EdgeInsets.all(20 * scale),
-              child: Column(
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // Profile Image
-                      Column(
-                        children: [
-                          Container(
-                            width: 80 * scale,
-                            height: 80 * scale,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.grey.shade200, width: 2),
-                              image: const DecorationImage(
-                                image: NetworkImage('https://i.pravatar.cc/150?u=sowmiya'),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                          SizedBox(height: 8 * scale),
-                          Text(
-                            'Sowmiya',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14 * scale,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ],
-                      ),
-                      
-                      SizedBox(width: 20 * scale),
-                      
-                      // Stats
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Sowmi_222',
-                              style: GoogleFonts.poppins(
-                                fontSize: 13 * scale,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            SizedBox(height: 12 * scale),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                GestureDetector(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => const FollowersFollowingScreen(title: 'Followers'),
-                                      ),
-                                    );
-                                  },
-                                  child: _buildStatItem('Followers', '50k', scale),
-                                ),
-                                GestureDetector(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => const FollowersFollowingScreen(title: 'Following'),
-                                      ),
-                                    );
-                                  },
-                                  child: _buildStatItem('Following', '15k', scale),
-                                ),
-                                ValueListenableBuilder<List<Map<String, dynamic>>>(
-                                  valueListenable: PostManager().uploadedPosts,
-                                  builder: (context, posts, child) {
-                                    return _buildStatItem('Story', (10 + posts.length).toString(), scale);
-                                  },
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  
-                  SizedBox(height: 15 * scale),
-                  // Bio
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '🌟 Storyteller | Dreamer | Achiever',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12 * scale,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        Text(
-                          '📍 Tamil Nadu, India',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12 * scale,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  
-                  SizedBox(height: 20 * scale),
-                  
-                  // Action Buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildProfileButton(
-                          'Edit Profile', 
-                          scale, 
-                          () => Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const EditProfileScreen()),
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 12 * scale),
-                      Expanded(
-                        child: _buildProfileButton('Share Profile', scale, () {
-                          ShareHelper.shareProfile('Sowmiya', 'Sowmi_222');
-                        }),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            
-            const Divider(thickness: 1, height: 1),
-            
+            // ── Story Stats Section Removed ───────────────────────────────
+
             // ── My Posts Section ──────────────────────────────────────────
             Padding(
               padding: EdgeInsets.fromLTRB(20 * scale, 16 * scale, 20 * scale, 8 * scale),
@@ -208,52 +75,60 @@ class _ForYouScreenState extends State<ForYouScreen> {
             ),
             
             // List of Posts
-            ValueListenableBuilder<List<Map<String, dynamic>>>(
-              valueListenable: PostManager().uploadedPosts,
-              builder: (context, posts, child) {
+            ListenableBuilder(
+              listenable: _storyStatusProvider,
+              builder: (context, child) {
+                if (_storyStatusProvider.isLoading) {
+                  return Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(40 * scale),
+                      child: const CircularProgressIndicator(color: Color(0xFF7C348D)),
+                    ),
+                  );
+                }
+                
+                if (_storyStatusProvider.errorMessage != null) {
+                  return Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(20 * scale),
+                      child: Text(_storyStatusProvider.errorMessage!, style: GoogleFonts.poppins(color: Colors.red)),
+                    ),
+                  );
+                }
+
+                final posts = _storyStatusProvider.userStories;
+                if (posts.isEmpty) {
+                  return Padding(
+                    padding: EdgeInsets.all(20 * scale),
+                    child: Center(child: Text('No stories yet.', style: GoogleFonts.poppins())),
+                  );
+                }
+
                 return Column(
                   children: [
                     ...posts.asMap().entries.map((entry) {
                       final index = entry.key;
                       final post = entry.value;
+                      final String image = post['header_image']?.toString().trim() ?? '';
                       return _buildPostCard(
                         context: context,
                         scale: scale,
-                        index: 100 + index, // Offset index for new posts
-                        title: post['title'],
-                        views: post['views'] ?? '0',
-                        likes: post['likes'] ?? '0',
-                        image: post['image'] ?? 'assets/images/ratan_tata.png',
-                        isLocalFile: post['isLocalFile'] ?? false,
+                        index: 100 + index, 
+                        title: post['story_title'] ?? 'Untitled',
+                        views: post['views']?.toString() ?? '0',
+                        likes: post['likes']?.toString() ?? '0',
+                        image: image.isEmpty ? 'assets/images/bannar01.png' : image,
+                        isLocalFile: post['isLocalFile'] == true,
                         pdfPath: post['pdfPath'],
-                        isLocalPdf: post['isLocalPdf'] ?? false,
+                        isLocalPdf: post['isLocalPdf'] == true,
                         fullData: post,
                       );
-                    }).toList().reversed.toList(), // Show newest first
+                    }).toList().reversed, // Show newest first
                   ],
                 );
               },
             ),
 
-            // _buildPostCard(
-            //   context: context,
-            //   scale: scale,
-            //   index: 0,
-            //   title: '"Ratan Tata – A Great Life Shaped by Values."',
-            //   views: '3M',
-            //   likes: '1M',
-            //   image: 'assets/images/ratan_tata.png',
-            // ),
-            // _buildPostCard(
-            //   context: context,
-            //   scale: scale,
-            //   index: 1,
-            //   title: '"Ratan Tata – A Great Life Shaped by Values."',
-            //   views: '3M',
-            //   likes: '1M',
-            //   image: 'assets/images/ratan_tata.png',
-            // ),
-            
             SizedBox(height: 80 * scale),
           ],
         ),
@@ -261,11 +136,13 @@ class _ForYouScreenState extends State<ForYouScreen> {
       floatingActionButton: Padding(
         padding: EdgeInsets.only(bottom: 10 * scale),
         child: FloatingActionButton.extended(
-          onPressed: () {
-            Navigator.push(
+          onPressed: () async {
+            await Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const UploadStoryScreen()),
             );
+            // Refresh stories after returning from upload screen
+            _storyStatusProvider.fetchUserStories();
           },
           backgroundColor: const Color(0xFF7C348D),
           icon: const Icon(Icons.add, color: Colors.white),
@@ -303,28 +180,7 @@ class _ForYouScreenState extends State<ForYouScreen> {
     );
   }
 
-  Widget _buildStatItem(String label, String count, double scale) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 13 * scale, // ← increased from 11 to 13
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-          ),
-        ),
-        Text(
-          count,
-          style: GoogleFonts.poppins(
-            fontSize: 14 * scale,
-            fontWeight: FontWeight.w500,
-            color: Colors.black54,
-          ),
-        ),
-      ],
-    );
-  }
+
 
   Widget _buildProfileButton(String label, double scale, VoidCallback onTap) {
     return GestureDetector(
@@ -361,6 +217,24 @@ class _ForYouScreenState extends State<ForYouScreen> {
     bool isLocalPdf = false,
     Map<String, dynamic>? fullData,
   }) {
+    String status = fullData?['status'] ?? 'pending';
+    Color statusColor;
+    switch (status.toLowerCase()) {
+      case 'approved':
+        statusColor = Colors.green;
+        break;
+      case 'draft':
+        statusColor = Colors.blue;
+        break;
+      case 'rejected':
+        statusColor = Colors.red;
+        break;
+      case 'pending':
+      default:
+        statusColor = Colors.orange;
+        break;
+    }
+
     return ValueListenableBuilder<Set<String>>(
       valueListenable: LikeManager().likedStoryIds,
       builder: (context, likedIds, child) {
@@ -423,7 +297,20 @@ class _ForYouScreenState extends State<ForYouScreen> {
                           child: Icon(Icons.person, size: 40 * scale, color: Colors.grey),
                         ),
                       )
-                    : Image.asset(
+                    : image.startsWith('http') || image.startsWith('https')
+                        ? Image.network(
+                            image,
+                            width: 100 * scale,
+                            height: 100 * scale,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              width: 100 * scale,
+                              height: 100 * scale,
+                              color: Colors.grey[200],
+                              child: Icon(Icons.person, size: 40 * scale, color: Colors.grey),
+                            ),
+                          )
+                        : Image.asset(
                         image,
                         width: 100 * scale,
                         height: 100 * scale,
@@ -517,6 +404,22 @@ class _ForYouScreenState extends State<ForYouScreen> {
                             Text(
                               likes,
                               style: GoogleFonts.poppins(fontSize: 10 * scale, color: Colors.black45),
+                            ),
+                            const Spacer(),
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 8 * scale, vertical: 2 * scale),
+                              decoration: BoxDecoration(
+                                color: statusColor,
+                                borderRadius: BorderRadius.circular(8 * scale),
+                              ),
+                              child: Text(
+                                status.toUpperCase(),
+                                style: GoogleFonts.poppins(
+                                  fontSize: 9 * scale,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
                             ),
                           ],
                         ),

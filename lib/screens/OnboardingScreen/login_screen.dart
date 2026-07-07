@@ -6,8 +6,6 @@ import 'package:true_story/screens/homescreen/home_screen.dart';
 import '../../utils/guest_manager.dart';
 import 'signup_screen.dart';
 import 'otp_bottom_sheet.dart';
-import 'package:google_sign_in/google_sign_in.dart' as auth;
-import 'package:provider/provider.dart';
 import '../../Provider/login_screen_provider.dart';
 import '../../shared_preference.dart';
 
@@ -68,9 +66,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
     // API is rejecting if these are missing/zero, so add fallbacks when empty
     final String finalCid = cid == 0 ? '21472147' : cid.toString();
-    final double finalLn = ln == 0.0 ? 11.0 : ln;
-    final double finalLt = lt == 0.0 ? 11.0 : lt;
-    final String finalDeviceId = deviceId.isEmpty ? '13' : deviceId;
+    final double finalLn = ln;
+    final double finalLt = lt;
+    final String finalDeviceId = deviceId;
 
     final success = await _loginProvider.requestOtp(
       mobile: _phoneController.text,
@@ -105,88 +103,10 @@ class _LoginScreenState extends State<LoginScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => OTPBottomSheet(maskedPhone: maskedPhone, phone: phone),
-    );
-  }
-
-  void _handleGoogleLogin() async {
-    try {
-      _showLoadingDialog();
-      
-      // Attempt real sign in using the new authenticate() method
-      final auth.GoogleSignInAccount? googleUser = await auth.GoogleSignIn.instance.authenticate();
-      
-      if (googleUser == null) {
-        if (mounted) Navigator.pop(context);
-        return; // User cancelled
-      }
-
-      // Successful login
-      await GuestManager().setGuestMode(false);
-      
-      if (!mounted) return;
-      Navigator.pop(context);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Welcome, ${googleUser.displayName}!', style: GoogleFonts.poppins()),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
-        (route) => false,
-      );
-    } catch (e) {
-      if (mounted) Navigator.pop(context);
-      
-      // Show error but allow demo login for the user to proceed
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Firebase config missing. Using demo login...', 
-            style: GoogleFonts.poppins(fontSize: 12)),
-          backgroundColor: primaryPurple,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      
-      _handleDemoLogin();
-    }
-  }
-
-  void _handleDemoLogin() async {
-    _showLoadingDialog();
-    await Future.delayed(const Duration(milliseconds: 1500));
-    
-    if (!mounted) return;
-    Navigator.pop(context);
-
-    await GuestManager().setGuestMode(false);
-    
-    if (!mounted) return;
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => const HomeScreen()),
-      (route) => false,
-    );
-  }
-
-  void _showLoadingDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Center(
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(15),
-          ),
-          child: const CircularProgressIndicator(color: primaryPurple),
-        ),
+      builder: (context) => OTPBottomSheet(
+        maskedPhone: maskedPhone, 
+        phone: phone, 
+        authorName: _loginProvider.authorName ?? 'User',
       ),
     );
   }
@@ -207,11 +127,15 @@ class _LoginScreenState extends State<LoginScreen> {
     final double inputFontSize = (14 * scale).clamp(16.0, 20.0);
     final double buttonHeight = (48 * scale).clamp(44.0, 54.0);
     final double buttonFontSize = (16 * scale).clamp(14.0, 17.0);
-    final double socialIconSize = (54 * scale).clamp(46.0, 62.0);
     final double captionFontSize = (10 * scale).clamp(9.0, 12.0);
 
-    return Scaffold(
-      backgroundColor: bgWhite,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+      ),
+      child: Scaffold(
+        backgroundColor: bgWhite,
       resizeToAvoidBottomInset: true,
       body: SingleChildScrollView(
         child: ConstrainedBox(
@@ -236,7 +160,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 right: 0,
                 child: Center(
                   child: Image.asset(
-                    'assets/images/Logo.png',
+                    'assets/images/Trustory logo horizontal home screen.png',
                     height: 45 * scale,
                     fit: BoxFit.contain,
                   ),
@@ -370,7 +294,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
 
-                      SizedBox(height: 12 * scale),
+                      SizedBox(height: 18 * scale),
 
                       // Get OTP Button
                       SizedBox(
@@ -418,52 +342,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
 
-                      // Divider
-                      Row(
-                        children: [
-                          const Expanded(child: Divider()),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
-                            child: Text(
-                              'or',
-                              style: GoogleFonts.poppins(
-                                color: Colors.grey,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ),
-                          const Expanded(child: Divider()),
-                        ],
-                      ),
-
-                      SizedBox(height: 3 * scale),
-                      Text(
-                        'continue with',
-                        style: GoogleFonts.poppins(
-                          color: Colors.grey,
-                          fontSize: 14 * scale,
-                        ),
-                      ),
-
-                      SizedBox(height: 10 * scale),
-
-                      // Social Login
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _SocialBtn(
-                            assetPath: 'assets/images/apple_logo.png',
-                            onTap: () {},
-                            size: socialIconSize,
-                          ),
-                          SizedBox(width: 20 * scale),
-                          _SocialBtn(
-                            assetPath: 'assets/images/google_logo.png',
-                            onTap: _handleGoogleLogin,
-                            size: socialIconSize,
-                          ),
-                        ],
-                      ),
+                      SizedBox(height: 18 * scale),
 
                       // Terms and Account
                       RichText(
@@ -472,7 +351,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           style: GoogleFonts.poppins(
                             fontSize: captionFontSize,
                             color: Colors.black,
-                            height: 1.8,
+                            height: 2.0,
                           ),
                           children: [
                             const TextSpan(
@@ -507,7 +386,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
 
-                      SizedBox(height: 14 * scale),
+                      SizedBox(height: 20 * scale),
 
                       // Continue As Guest
                       SizedBox(
@@ -555,39 +434,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
-    );
+    ));
   }
 }
-
-class _SocialBtn extends StatelessWidget {
-  final String assetPath;
-  final VoidCallback onTap;
-  final double size;
-
-  const _SocialBtn({
-    required this.assetPath,
-    required this.onTap,
-    required this.size,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(size),
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.grey.shade300),
-        ),
-        child: Padding(
-          padding: EdgeInsets.all(size * 0.25),
-          child: Image.asset(assetPath, fit: BoxFit.contain),
-        ),
-      ),
-    );
-  }
-}
-

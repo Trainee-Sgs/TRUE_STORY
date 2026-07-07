@@ -5,6 +5,7 @@ import '../../utils/share_helper.dart';
 import '../../utils/save_manager.dart';
 import '../../utils/history_manager.dart';
 import '../../utils/download_manager.dart';
+import '../../utils/date_util.dart';
 import '../homescreen/story_detail_screen.dart';
 
 class HistoryScreen extends StatefulWidget {
@@ -42,10 +43,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   List<Map<String, dynamic>> get _filteredHistoryItems {
-    final items = HistoryManager().historyItems;
+    final items = HistoryManager().historyItems.where((item) {
+      final title = (item['title'] ?? item['story_title'] ?? '').toString();
+      return title.trim().isNotEmpty && !title.toUpperCase().contains('UNKNOWN');
+    }).toList();
+
     if (_searchQuery.isEmpty) return items;
     return items
-        .where((item) => item['title']
+        .where((item) => (item['title'] ?? item['story_title'] ?? '')
             .toString()
             .toLowerCase()
             .contains(_searchQuery.toLowerCase()))
@@ -72,7 +77,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         _isSelectionMode = false;
       } else {
         for (var item in items) {
-          _selectedStoryIds.add(item['title']);
+          _selectedStoryIds.add(item['title'] ?? item['story_title'] ?? 'unknown_title');
         }
         _isSelectionMode = true;
       }
@@ -201,7 +206,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               itemCount: historyItems.length,
               itemBuilder: (context, index) {
                 final item = historyItems[index];
-                final String id = item['title'];
+                final String id = item['title'] ?? item['story_title'] ?? 'unknown_title';
                 final isSelected = _selectedStoryIds.contains(id);
 
                 return Stack(
@@ -241,7 +246,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Widget _buildHistoryCard(Map<String, dynamic> item, double scale, BuildContext context, bool isSelected) {
     final bool isLocalFile = item['isLocalFile'] ?? false;
-    final String imagePath = item['image'] ?? 'assets/images/placeholder.png';
+    final String imagePath = item['image'] ?? item['header_image'] ?? 'assets/images/placeholder.png';
 
     return Container(
       margin: EdgeInsets.only(bottom: 12 * scale),
@@ -264,13 +269,23 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   width: 100 * scale,
                   height: 100 * scale,
                   fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(width: 100 * scale, height: 100 * scale, color: Colors.grey.shade300, child: Icon(Icons.broken_image, color: Colors.grey)),
                 )
-              : Image.asset(
-                  imagePath,
-                  width: 100 * scale,
-                  height: 100 * scale,
-                  fit: BoxFit.cover,
-                ),
+              : (imagePath.startsWith('http')
+                  ? Image.network(
+                      imagePath,
+                      width: 100 * scale,
+                      height: 100 * scale,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(width: 100 * scale, height: 100 * scale, color: Colors.grey.shade300, child: Icon(Icons.broken_image, color: Colors.grey)),
+                    )
+                  : Image.asset(
+                      imagePath,
+                      width: 100 * scale,
+                      height: 100 * scale,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(width: 100 * scale, height: 100 * scale, color: Colors.grey.shade300, child: Icon(Icons.broken_image, color: Colors.grey)),
+                    )),
           ),
           Expanded(
             child: Padding(
@@ -283,7 +298,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     children: [
                       Expanded(
                         child: Text(
-                          item['title'],
+                          item['title'] ?? item['story_title'] ?? 'No Title',
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.poppins(
@@ -323,7 +338,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         ],
                       ),
                       Text(
-                        item['readTime'] ?? '2 min read',
+                        DateUtil.getTimeAgo(item['timestamp'] ?? item['created_at'] ?? item['date']),
                         style: GoogleFonts.poppins(fontSize: 10 * scale, color: Colors.black45),
                       ),
                     ],
@@ -338,7 +353,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   void _showMoreOptions(BuildContext context, double scale, Map<String, dynamic> storyData) {
-    String storyId = storyData['title'] ?? 'unknown';
+    String storyId = storyData['title'] ?? storyData['story_title'] ?? 'unknown';
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,

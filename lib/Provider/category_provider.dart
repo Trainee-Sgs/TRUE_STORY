@@ -27,9 +27,9 @@ class CategoryProvider extends ChangeNotifier {
 
       // Fallbacks just in case preferences are not fully populated
       final String finalCid = cid == 0 ? '21472147' : cid.toString();
-      final double finalLn = ln == 0.0 ? 23.0 : ln;
-      final double finalLt = lt == 0.0 ? 45.0 : lt;
-      final String finalDeviceId = deviceId.isEmpty ? '45' : deviceId;
+      final double finalLn = ln;
+      final double finalLt = lt;
+      final String finalDeviceId = deviceId;
 
       final Uri url = Uri.parse('https://truestory.ai.in/ai/api/m_api/');
       final Map<String, String> requestBody = {

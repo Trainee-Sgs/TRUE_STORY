@@ -12,6 +12,7 @@ import 'for_you_screen.dart';
 import '../../widgets/custom_bottom_nav.dart';
 import '../../utils/post_manager.dart';
 import '../../utils/chapter_helper.dart';
+import '../../Provider/upload_story_provider.dart';
 
 class UploadStoryScreen extends StatefulWidget {
   const UploadStoryScreen({super.key});
@@ -21,6 +22,7 @@ class UploadStoryScreen extends StatefulWidget {
 }
 
 class _UploadStoryScreenState extends State<UploadStoryScreen> {
+  final UploadStoryProvider _uploadStoryProvider = UploadStoryProvider();
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   String? _selectedLanguage;
@@ -158,6 +160,7 @@ class _UploadStoryScreenState extends State<UploadStoryScreen> {
               'Enter Description', 
               scale, 
               maxLines: 5, 
+              maxLength: 1000,
               controller: _descriptionController,
               onChanged: (_) => setState(() {}),
             ),
@@ -342,7 +345,7 @@ class _UploadStoryScreenState extends State<UploadStoryScreen> {
                         ),
                       ),
                     ),
-                  )).toList(),
+                  )),
                 ],
               ],
             ),
@@ -377,6 +380,20 @@ class _UploadStoryScreenState extends State<UploadStoryScreen> {
                   child: ElevatedButton(
                     onPressed: _isFormValid 
                       ? () async {
+                          // Word count validation
+                          int wordCount = _descriptionController.text.trim().isEmpty 
+                              ? 0 
+                              : _descriptionController.text.trim().split(RegExp(r'\s+')).length;
+                              
+                          if (wordCount > 1000) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Description cannot exceed 1000 words.')),
+                              );
+                            }
+                            return;
+                          }
+
                           // Show loading indicator
                           showDialog(
                             context: context,
@@ -393,31 +410,48 @@ class _UploadStoryScreenState extends State<UploadStoryScreen> {
                           // Split into chapters
                           final chapters = ChapterHelper.splitIntoChapters(fullText);
                           final chapterTitles = chapters.map((c) => c['title']!).toList();
+
+                          final success = await _uploadStoryProvider.uploadStory(
+                            title: _titleController.text,
+                            description: _descriptionController.text,
+                            category: _selectedCategory ?? 'Startup',
+                            language: _selectedLanguage ?? 'English',
+                            imageFile: _headerImage,
+                            pdfFile: _thumbnailFile,
+                          );
                           
                           if (mounted) Navigator.pop(context); // Close loading indicator
 
-                          // Add to PostManager
-                          PostManager().addPost({
-                            'title': _titleController.text,
-                            'description': _descriptionController.text,
-                            'overview': _descriptionController.text, // Added for detail screen
-                            'language': _selectedLanguage,
-                            'category': _selectedCategory,
-                            'image': _headerImage?.path ?? 'assets/images/ratan_tata.png',
-                            'pdfPath': null, 
-                            'originalPdfPath': _thumbnailFile?.path,
-                            'fullText': fullText,
-                            'extractedPages': extractedPages,
-                            'views': '0',
-                            'likes': '0',
-                            'isLocalFile': _headerImage != null,
-                            'isUploadedStory': true,
-                            'rating': 4.5,
-                            'bannerTitle': _titleController.text.split(' ')[0].toUpperCase(),
-                            'chapters': chapters,
-                            'chapterTitles': chapterTitles,
-                          });
-                          _showSuccessDialog(scale);
+                          if (success) {
+                            // Add to PostManager
+                            PostManager().addPost({
+                              'title': _titleController.text,
+                              'description': _descriptionController.text,
+                              'overview': _descriptionController.text, // Added for detail screen
+                              'language': _selectedLanguage,
+                              'category': _selectedCategory,
+                              'image': _headerImage?.path ?? 'assets/images/ratan_tata.png',
+                              'pdfPath': null, 
+                              'originalPdfPath': _thumbnailFile?.path,
+                              'fullText': fullText,
+                              'extractedPages': extractedPages,
+                              'views': '0',
+                              'likes': '0',
+                              'isLocalFile': _headerImage != null,
+                              'isUploadedStory': true,
+                              'rating': 4.5,
+                              'bannerTitle': _titleController.text.split(' ')[0].toUpperCase(),
+                              'chapters': chapters,
+                              'chapterTitles': chapterTitles,
+                            });
+                            _showSuccessDialog(scale);
+                          } else {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(_uploadStoryProvider.errorMessage ?? 'Failed to upload story')),
+                              );
+                            }
+                          }
                         } 
                       : null,
                     style: ElevatedButton.styleFrom(
@@ -540,7 +574,7 @@ class _UploadStoryScreenState extends State<UploadStoryScreen> {
     );
   }
 
-  Widget _buildTextField(String hint, double scale, {int maxLines = 1, TextEditingController? controller, Function(String)? onChanged}) {
+  Widget _buildTextField(String hint, double scale, {int maxLines = 1, int? maxLength, TextEditingController? controller, Function(String)? onChanged}) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8 * scale),
@@ -551,10 +585,12 @@ class _UploadStoryScreenState extends State<UploadStoryScreen> {
         controller: controller,
         onChanged: onChanged,
         maxLines: maxLines,
+        maxLength: maxLength,
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: GoogleFonts.poppins(fontSize: 13 * scale, color: Colors.grey),
           border: InputBorder.none,
+          counterText: '', // Hide the default character counter
         ),
       ),
     );

@@ -203,7 +203,7 @@ class _LanguageDialogState extends State<LanguageDialog> {
                         width: 10 * widget.scale,
                         height: 10 * widget.scale,
                         decoration: const BoxDecoration(
-                          color: Color(0xFFffffff),
+                          color: Color(0xFF7C348D),
                           shape: BoxShape.circle,
                         ),
                       ),

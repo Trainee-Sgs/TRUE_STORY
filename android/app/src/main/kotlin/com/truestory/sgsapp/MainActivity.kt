@@ -1,4 +1,4 @@
-package com.example.true_story
+package com.truestory.sgsapp
 
 import io.flutter.embedding.android.FlutterActivity
 

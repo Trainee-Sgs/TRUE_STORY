@@ -495,11 +495,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   
                   storiesToPass = history.map((h) {
                     return {
-                      'image': h['image'] ?? 'assets/images/bannar01.png',
-                      'title': h['title'] ?? 'Unknown Story',
+                      'image': h['image'] ?? h['header_image'] ?? 'assets/images/bannar01.png',
+                      'title': h['title'] ?? h['story_title'] ?? 'Unknown Story',
                       'views': h['views']?.toString() ?? '0',
                       'rating': h['rating'] ?? 4.5,
-                      'overview': h['overview'] ?? '',
+                      'overview': h['overview'] ?? h['story_description'] ?? h['description'] ?? '',
                       ...h,
                     };
                   }).toList();

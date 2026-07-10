@@ -45,7 +45,7 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
           'text': 'This deserves more views \u{1F44C}',
           'likes': 6,
           'dislikes': 4,
-        }
+        },
       ],
     },
   ];
@@ -93,7 +93,8 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
             child: ListView.builder(
               padding: EdgeInsets.symmetric(horizontal: 16 * widget.scale),
               itemCount: _comments.length,
-              itemBuilder: (context, index) => _buildCommentItem(_comments[index]),
+              itemBuilder: (context, index) =>
+                  _buildCommentItem(_comments[index]),
             ),
           ),
 
@@ -106,7 +107,12 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
 
   Widget _buildHeader() {
     return Container(
-      padding: EdgeInsets.fromLTRB(20 * widget.scale, 10 * widget.scale, 10 * widget.scale, 10 * widget.scale),
+      padding: EdgeInsets.fromLTRB(
+        20 * widget.scale,
+        10 * widget.scale,
+        10 * widget.scale,
+        10 * widget.scale,
+      ),
       decoration: BoxDecoration(
         color: Colors.grey[100],
         borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
@@ -123,7 +129,11 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
             ),
           ),
           IconButton(
-            icon: Icon(Icons.cancel_outlined, color: Colors.black, size: 28 * widget.scale),
+            icon: Icon(
+              Icons.cancel_outlined,
+              color: Colors.black,
+              size: 28 * widget.scale,
+            ),
             onPressed: () => Navigator.pop(context),
           ),
         ],
@@ -133,7 +143,10 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
 
   Widget _buildSortingTabs() {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 15 * widget.scale, horizontal: 20 * widget.scale),
+      padding: EdgeInsets.symmetric(
+        vertical: 15 * widget.scale,
+        horizontal: 20 * widget.scale,
+      ),
       color: Colors.grey[100],
       child: Row(
         children: [
@@ -153,7 +166,10 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
         });
       },
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 25 * widget.scale, vertical: 8 * widget.scale),
+        padding: EdgeInsets.symmetric(
+          horizontal: 25 * widget.scale,
+          vertical: 8 * widget.scale,
+        ),
         decoration: BoxDecoration(
           color: isSelected ? Colors.white : Colors.transparent,
           borderRadius: BorderRadius.circular(10 * widget.scale),
@@ -163,7 +179,7 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
                     color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 5,
                     offset: const Offset(0, 2),
-                  )
+                  ),
                 ]
               : null,
         ),
@@ -206,16 +222,24 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
     );
   }
 
-  Widget _buildCommentItem(Map<String, dynamic> comment, {bool isReply = false}) {
+  Widget _buildCommentItem(
+    Map<String, dynamic> comment, {
+    bool isReply = false,
+  }) {
     return Padding(
-      padding: EdgeInsets.only(bottom: 20 * widget.scale, left: isReply ? 40 * widget.scale : 0),
+      padding: EdgeInsets.only(
+        bottom: 20 * widget.scale,
+        left: isReply ? 40 * widget.scale : 0,
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
             radius: (isReply ? 12 : 18) * widget.scale,
             backgroundColor: Colors.grey[200],
-            backgroundImage: const AssetImage('assets/images/ratan_tata.png'), // Default mock avatar
+            backgroundImage: const AssetImage(
+              'assets/images/ratan_tata.png',
+            ), // Default mock avatar
           ),
           SizedBox(width: 12 * widget.scale),
           Expanded(
@@ -224,7 +248,10 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
               children: [
                 RichText(
                   text: TextSpan(
-                    style: GoogleFonts.poppins(fontSize: 14 * widget.scale, color: Colors.black),
+                    style: GoogleFonts.poppins(
+                      fontSize: 14 * widget.scale,
+                      color: Colors.black,
+                    ),
                     children: [
                       TextSpan(
                         text: '${comment['name']} ',
@@ -232,7 +259,10 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
                       ),
                       TextSpan(
                         text: '• ${comment['time']}',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 10 * widget.scale),
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 10 * widget.scale,
+                        ),
                       ),
                     ],
                   ),
@@ -249,13 +279,21 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
                 SizedBox(height: 8 * widget.scale),
                 Row(
                   children: [
-                    _buildInteractionButton(Icons.thumb_up_alt_outlined, comment['likes'].toString()),
-                    _buildInteractionButton(Icons.thumb_down_alt_outlined, comment['dislikes'].toString()),
+                    _buildInteractionButton(
+                      Icons.thumb_up_alt_outlined,
+                      comment['likes'].toString(),
+                    ),
+                    _buildInteractionButton(
+                      Icons.thumb_down_alt_outlined,
+                      comment['dislikes'].toString(),
+                    ),
                     _buildInteractionButton(Icons.chat_bubble_outline, ''),
                   ],
                 ),
                 if (comment['replies'] != null && comment['replies'].isNotEmpty)
-                  ... (comment['replies'] as List).map((reply) => _buildCommentItem(reply, isReply: true)).toList(),
+                  ...(comment['replies'] as List)
+                      .map((reply) => _buildCommentItem(reply, isReply: true))
+                      .toList(),
               ],
             ),
           ),
@@ -274,7 +312,10 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
             SizedBox(width: 6 * widget.scale),
             Text(
               count,
-              style: GoogleFonts.poppins(fontSize: 12 * widget.scale, color: Colors.grey[600]),
+              style: GoogleFonts.poppins(
+                fontSize: 12 * widget.scale,
+                color: Colors.grey[600],
+              ),
             ),
           ],
         ],
@@ -284,7 +325,12 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
 
   Widget _buildInputBar(double bottomInset) {
     return Container(
-      padding: EdgeInsets.fromLTRB(16 * widget.scale, 10 * widget.scale, 16 * widget.scale, 10 * widget.scale + bottomInset),
+      padding: EdgeInsets.fromLTRB(
+        16 * widget.scale,
+        10 * widget.scale,
+        16 * widget.scale,
+        10 * widget.scale + bottomInset,
+      ),
       decoration: BoxDecoration(
         color: Colors.grey[200],
         border: Border(top: BorderSide(color: Colors.grey[300]!)),
@@ -294,7 +340,9 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
           CircleAvatar(
             radius: 16 * widget.scale,
             backgroundColor: Colors.grey[300],
-            backgroundImage: const AssetImage('assets/images/ratan_tata.png'), // User's avatar
+            backgroundImage: const AssetImage(
+              'assets/images/ratan_tata.png',
+            ), // User's avatar
           ),
           SizedBox(width: 12 * widget.scale),
           Expanded(
@@ -302,7 +350,9 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
               height: 45 * widget.scale,
               padding: EdgeInsets.symmetric(horizontal: 20 * widget.scale),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF0F1), // Light pinkish as in screenshot
+                color: const Color(
+                  0xFFFFF0F1,
+                ), // Light pinkish as in screenshot
                 borderRadius: BorderRadius.circular(25 * widget.scale),
               ),
               child: TextField(
@@ -310,9 +360,14 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
                 style: GoogleFonts.poppins(fontSize: 13 * widget.scale),
                 decoration: InputDecoration(
                   hintText: 'Drop Your Comment here....',
-                  hintStyle: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 13 * widget.scale),
+                  hintStyle: GoogleFonts.poppins(
+                    color: Colors.grey[500],
+                    fontSize: 13 * widget.scale,
+                  ),
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(vertical: 10 * widget.scale),
+                  contentPadding: EdgeInsets.symmetric(
+                    vertical: 10 * widget.scale,
+                  ),
                 ),
                 onSubmitted: (_) => _addComment(),
               ),
@@ -321,7 +376,11 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
           if (_commentController.text.isNotEmpty)
             IconButton(
               onPressed: _addComment,
-              icon: Icon(Icons.send, color: const Color(0xFF7C348D), size: 24 * widget.scale),
+              icon: Icon(
+                Icons.send,
+                color: const Color(0xFF7C348D),
+                size: 24 * widget.scale,
+              ),
             ),
         ],
       ),

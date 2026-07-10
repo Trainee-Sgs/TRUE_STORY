@@ -6,14 +6,22 @@ import '../utils/download_manager.dart';
 import '../utils/post_manager.dart';
 
 /// Call this anywhere to show the 3-dot options bottom sheet.
-void showStoryOptions(BuildContext context, String storyTitle, [Map<String, dynamic>? storyData]) {
+void showStoryOptions(
+  BuildContext context,
+  String storyTitle, [
+  Map<String, dynamic>? storyData,
+]) {
   final double w = MediaQuery.of(context).size.width;
   final double scale = (w / 360).clamp(0.8, 1.4);
 
   showModalBottomSheet(
     context: context,
     backgroundColor: Colors.transparent,
-    builder: (ctx) => _StoryOptionsSheet(storyTitle: storyTitle, scale: scale, storyData: storyData),
+    builder: (ctx) => _StoryOptionsSheet(
+      storyTitle: storyTitle,
+      scale: scale,
+      storyData: storyData,
+    ),
   );
 }
 
@@ -21,7 +29,11 @@ class _StoryOptionsSheet extends StatelessWidget {
   final String storyTitle;
   final double scale;
   final Map<String, dynamic>? storyData;
-  const _StoryOptionsSheet({required this.storyTitle, required this.scale, this.storyData});
+  const _StoryOptionsSheet({
+    required this.storyTitle,
+    required this.scale,
+    this.storyData,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +42,10 @@ class _StoryOptionsSheet extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20 * scale)),
       ),
-      padding: EdgeInsets.symmetric(vertical: 20 * scale, horizontal: 16 * scale),
+      padding: EdgeInsets.symmetric(
+        vertical: 20 * scale,
+        horizontal: 16 * scale,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -76,7 +91,9 @@ class _StoryOptionsSheet extends StatelessWidget {
               final isDownloaded = downloadedIds.contains(storyTitle);
               return _OptionItem(
                 ctx: context,
-                icon: isDownloaded ? Icons.file_download_done : Icons.file_download_outlined,
+                icon: isDownloaded
+                    ? Icons.file_download_done
+                    : Icons.file_download_outlined,
                 label: isDownloaded ? 'Remove Download' : 'Download Story',
                 scale: scale,
                 onTap: () {
@@ -97,15 +114,17 @@ class _StoryOptionsSheet extends StatelessWidget {
                         backgroundColor: const Color(0xFF7C348D),
                         behavior: SnackBarBehavior.floating,
                         margin: EdgeInsets.all(20 * scale),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10 * scale)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10 * scale),
+                        ),
                       ),
                     );
 
                     // Simulate a slight delay for download "completion" feedback
                     Future.delayed(const Duration(seconds: 1), () {
-                       if(context.mounted) {
-                         ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                         ScaffoldMessenger.of(context).showSnackBar(
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
                               'Story downloaded successfully!',
@@ -115,10 +134,12 @@ class _StoryOptionsSheet extends StatelessWidget {
                             backgroundColor: Colors.green,
                             behavior: SnackBarBehavior.floating,
                             margin: EdgeInsets.all(20 * scale),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10 * scale)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10 * scale),
+                            ),
                           ),
                         );
-                       }
+                      }
                     });
                   }
                 },
@@ -142,14 +163,30 @@ class _StoryOptionsSheet extends StatelessWidget {
     );
   }
 
-  void _showDeleteConfirmation(BuildContext context, String title, double scale) {
+  void _showDeleteConfirmation(
+    BuildContext context,
+    String title,
+    double scale,
+  ) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Delete Story?', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
-        content: Text('Are you sure you want to permanently delete this story? This action cannot be undone.', style: GoogleFonts.poppins()),
+        title: Text(
+          'Delete Story?',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Are you sure you want to permanently delete this story? This action cannot be undone.',
+          style: GoogleFonts.poppins(),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey))),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.poppins(color: Colors.grey),
+            ),
+          ),
           TextButton(
             onPressed: () {
               PostManager().deletePost(title);
@@ -157,8 +194,14 @@ class _StoryOptionsSheet extends StatelessWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Story deleted successfully')),
               );
-            }, 
-            child: Text('Delete', style: GoogleFonts.poppins(color: Colors.red, fontWeight: FontWeight.bold))
+            },
+            child: Text(
+              'Delete',
+              style: GoogleFonts.poppins(
+                color: Colors.red,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -192,7 +235,10 @@ class _OptionItem extends StatelessWidget {
       },
       borderRadius: BorderRadius.circular(8 * scale),
       child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 14 * scale, horizontal: 8 * scale),
+        padding: EdgeInsets.symmetric(
+          vertical: 14 * scale,
+          horizontal: 8 * scale,
+        ),
         child: Row(
           children: [
             Icon(icon, size: 24 * scale, color: displayColor),

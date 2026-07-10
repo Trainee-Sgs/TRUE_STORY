@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../utils/pagination_helper.dart';
@@ -7,6 +9,8 @@ import '../../utils/share_helper.dart';
 import '../../widgets/like_button.dart';
 import '../../utils/feedback_manager.dart';
 import '../../utils/history_manager.dart';
+import '../../shared_preference.dart';
+
 
 class StoryReaderScreen extends StatefulWidget {
   final Map<String, dynamic> storyData;
@@ -25,7 +29,7 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
   int _currentChapterIndex = 0;
   List<Map<String, dynamic>> _storyChapters = [];
 
-  int _selectedFeedback = -1; // -1: None, 0: Sad, 1: Happy, 2: Love
+  int _selectedFeedback = -1; // -1: None, 1-5: Star rating
   bool _feedbackSubmitted = false;
   late final String _storyId;
 
@@ -486,18 +490,109 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
           ),
           const SizedBox(height: 24),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildEmoji(0, Icons.sentiment_very_dissatisfied, scale),
-              _buildEmoji(1, Icons.sentiment_neutral, scale),
-              _buildEmoji(2, Icons.sentiment_very_satisfied, scale),
-            ],
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(5, (index) {
+              int starValue = index + 1;
+              bool isSelected = _selectedFeedback >= starValue;
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    if (_selectedFeedback == starValue) {
+                      _selectedFeedback = -1;
+                    } else {
+                      _selectedFeedback = starValue;
+                    }
+                  });
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  child: Icon(
+                    isSelected ? Icons.star : Icons.star_border,
+                    size: 40 * scale,
+                    color: isSelected ? Colors.amber : Colors.black38,
+                  ),
+                ),
+              );
+            }),
           ),
           const SizedBox(height: 24),
           GestureDetector(
             onTap: _selectedFeedback == -1 ? null : () async {
+              final selectedRating = _selectedFeedback;
               setState(() => _feedbackSubmitted = true);
               await FeedbackManager().submitFeedback(_storyId);
+
+              // 1. Instantly calculate and update rating locally so it reflects on the UI immediately
+              try {
+                final double currentRating = double.tryParse(widget.storyData['rating']?.toString() ?? '0.0') ?? 0.0;
+                final int currentCount = int.tryParse(widget.storyData['rating_count']?.toString() ?? '0') ?? 0;
+                
+                final int newCount = currentCount + 1;
+                double newRating = currentCount == 0 
+                    ? selectedRating.toDouble() 
+                    : ((currentRating * currentCount) + selectedRating) / newCount;
+                newRating = double.parse(newRating.toStringAsFixed(1));
+
+                widget.storyData['rating'] = newRating.toString();
+                widget.storyData['rating_count'] = newCount.toString();
+              } catch (e) {
+                debugPrint('Error updating local rating state: $e');
+              }
+              
+              try {
+                final sessionData = await SessionManager.getAll();
+                final String cid = sessionData['cid'].toString() == '0' ? '21472147' : sessionData['cid'].toString();
+                final String deviceId = sessionData['device_id'].toString().isEmpty ? 'test_device_001' : sessionData['device_id'].toString();
+                final String lt = sessionData['lt'].toString() == '0.0' ? '11.0168' : sessionData['lt'].toString();
+                final String ln = sessionData['ln'].toString() == '0.0' ? '76.9558' : sessionData['ln'].toString();
+                
+                final String storyId = widget.storyData['story_id']?.toString() ?? 
+                                       widget.storyData['id']?.toString() ?? 
+                                       widget.storyData['title']?.toString() ?? 
+                                       'STORY001';
+
+                final Uri url = Uri.parse('https://truestory.ai.in/ai/api/m_api/');
+                final Map<String, String> requestBody = {
+                  'cid': cid,
+                  'story_id': storyId,
+                  'device_id': deviceId,
+                  'lt': lt,
+                  'ln': ln,
+                  'rating': selectedRating.toString(),
+                  'type': '2512',
+                };
+
+                debugPrint('┌──────────────────────────────────────┐');
+                debugPrint('│        SUBMIT RATING REQUEST         │');
+                debugPrint('├──────────────────────────────────────┤');
+                debugPrint('│ URL  : $url');
+                debugPrint('│ BODY : $requestBody');
+                debugPrint('└──────────────────────────────────────┘');
+
+                final response = await http.post(url, body: requestBody);
+
+                debugPrint('┌──────────────────────────────────────┐');
+                debugPrint('│        SUBMIT RATING RESPONSE        │');
+                debugPrint('├──────────────────────────────────────┤');
+                debugPrint('│ STATUS CODE : ${response.statusCode}');
+                debugPrint('│ RESPONSE    : ${response.body}');
+                debugPrint('└──────────────────────────────────────┘');
+
+                // 2. Override with API response values if successfully returned from server
+                if (response.statusCode == 200) {
+                  final data = jsonDecode(response.body);
+                  if (data['error'] == false) {
+                    if (data['rating'] != null) {
+                      widget.storyData['rating'] = data['rating'].toString();
+                    }
+                    if (data['rating_count'] != null) {
+                      widget.storyData['rating_count'] = data['rating_count'].toString();
+                    }
+                  }
+                }
+              } catch (e) {
+                debugPrint('Error submitting rating API: $e');
+              }
               
               if (!mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
@@ -531,24 +626,7 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
     );
   }
 
-  Widget _buildEmoji(int index, IconData icon, double scale) {
-    bool isSelected = _selectedFeedback == index;
-    return GestureDetector(
-      onTap: () => setState(() => _selectedFeedback = index),
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFE1BEE7).withValues(alpha: 0.5) : Colors.transparent,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          icon,
-          size: 40 * scale,
-          color: isSelected ? const Color(0xFF7C348D) : Colors.black38,
-        ),
-      ),
-    );
-  }
+
 
   void _showSettingsSheet(double scale) {
     showModalBottomSheet(

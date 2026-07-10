@@ -202,7 +202,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     return {
                       'image': img,
                       'title': p['story_title']?.toString() ?? 'Untitled',
-                      'rating': double.tryParse(p['rating']?.toString() ?? '4.5') ?? 4.5,
+                      'rating': double.tryParse(p['rating']?.toString() ?? '0.0') ?? 0.0,
                       'views': p['views']?.toString() ?? '0',
                       'isPremium': p['is_premium'] == true || p['is_premium'] == 'true' || p['is_premium'] == 1,
                       'overview': p['story_description']?.toString() ?? 'No content.',

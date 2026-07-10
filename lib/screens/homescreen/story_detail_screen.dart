@@ -135,7 +135,7 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       _buildBannerFooterItem('VIEWS', storyData['views']?.toString() ?? '0', scale),
-                      _buildBannerFooterItem('RATING', storyData['rating']?.toString() ?? '4.5', scale),
+                      _buildBannerFooterItem('RATING', storyData['rating']?.toString() ?? '0.0', scale),
                       _buildBannerFooterItem('CATEGORY', storyData['category']?.toString().toUpperCase() ?? 'STORY', scale),
                     ],
                   ),
@@ -198,7 +198,7 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
                   Icon(Icons.star, color: Colors.amber, size: 14 * scale),
                   SizedBox(width: 2 * scale),
                   Text(
-                    '${storyData['rating'] ?? '4.5'}(${storyData['rating_count'] ?? '0'})',
+                    '${storyData['rating'] ?? '0.0'}(${storyData['rating_count'] ?? '0'})',
                     style: GoogleFonts.poppins(
                       fontSize: 10 * scale,
                       fontWeight: FontWeight.bold,
@@ -359,7 +359,9 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
                           builder: (context) =>
                               StoryReaderScreen(storyData: storyData),
                         ),
-                      );
+                      ).then((_) {
+                        if (mounted) setState(() {});
+                      });
                     },
                     child: Text(
                       'READ MORE',
@@ -391,7 +393,9 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
                       builder: (context) =>
                           StoryReaderScreen(storyData: storyData),
                     ),
-                  );
+                  ).then((_) {
+                    if (mounted) setState(() {});
+                  });
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF7C348D),

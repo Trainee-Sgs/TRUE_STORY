@@ -479,7 +479,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     return {
                       'image': img,
                       'title': p['story_title']?.toString() ?? 'Untitled',
-                      'rating': double.tryParse(p['rating']?.toString() ?? '4.5') ?? 4.5,
+                      'rating': double.tryParse(p['rating']?.toString() ?? '0.0') ?? 0.0,
                       'views': p['views']?.toString() ?? '0',
                       'isPremium': p['is_premium'] == true || p['is_premium'] == 'true' || p['is_premium'] == 1,
                       'overview': p['story_description']?.toString() ?? 'No content.',
@@ -498,7 +498,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       'image': h['image'] ?? h['header_image'] ?? 'assets/images/bannar01.png',
                       'title': h['title'] ?? h['story_title'] ?? 'Unknown Story',
                       'views': h['views']?.toString() ?? '0',
-                      'rating': h['rating'] ?? 4.5,
+                      'rating': h['rating'] ?? 0.0,
                       'overview': h['overview'] ?? h['story_description'] ?? h['description'] ?? '',
                       ...h,
                     };
@@ -571,7 +571,7 @@ class _HomeScreenState extends State<HomeScreen> {
           return _PopularCard(
             image: imageUrl,
             title: p['story_title']?.toString() ?? 'Untitled',
-            rating: double.tryParse(p['rating']?.toString() ?? '4.5') ?? 4.5,
+            rating: double.tryParse(p['rating']?.toString() ?? '0.0') ?? 0.0,
             views: p['views']?.toString() ?? '0',
             isPremium: p['is_premium'] == true || p['is_premium'] == 'true' || p['is_premium'] == 1,
             overview: p['story_description']?.toString() ?? 'No content.',

@@ -439,7 +439,7 @@ class _UploadStoryScreenState extends State<UploadStoryScreen> {
                               'likes': '0',
                               'isLocalFile': _headerImage != null,
                               'isUploadedStory': true,
-                              'rating': 4.5,
+                              'rating': 0.0,
                               'bannerTitle': _titleController.text.split(' ')[0].toUpperCase(),
                               'chapters': chapters,
                               'chapterTitles': chapterTitles,
